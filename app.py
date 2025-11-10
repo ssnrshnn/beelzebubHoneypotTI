@@ -11,86 +11,32 @@ from collections import Counter, defaultdict
 import re
 import csv
 import io
-import os
-import tempfile
 
-# Set Flask app with explicit paths for Vercel compatibility
-app = Flask(
-    __name__,
-    template_folder='templates',
-    static_folder='static',
-    static_url_path='/static'
-)
+app = Flask(__name__)
 
 # Global variable to cache log data
 log_data = []
 LOG_FILE = 'beelzebub.log'
 
 
-def load_logs_from_content(content):
-    """Load and parse log data from string content"""
-    global log_data
-    log_data = []
-    
-    for line_num, line in enumerate(content.split('\n'), 1):
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            entry = json.loads(line)
-            entry['line_number'] = line_num
-            log_data.append(entry)
-        except json.JSONDecodeError:
-            print(f"Warning: Could not parse line {line_num}")
-            continue
-    
-    return log_data
-
-
 def load_logs():
-    """Load and parse log file from multiple sources (URL, env var, or local file)"""
+    """Load and parse log file"""
     global log_data
     log_data = []
     
-    # Try loading from URL first (for Vercel/external storage)
-    log_url = os.environ.get('LOG_FILE_URL')
-    if log_url:
-        try:
-            import requests
-            response = requests.get(log_url, timeout=30)
-            if response.status_code == 200:
-                print(f"Loading log file from URL: {log_url}")
-                return load_logs_from_content(response.text)
-        except ImportError:
-            print("requests library not available for URL loading")
-        except Exception as e:
-            print(f"Error loading from URL: {e}")
-    
-    # Try loading from environment variable (for small files)
-    log_content = os.environ.get('BEELZEBUB_LOG_CONTENT')
-    if log_content:
-        try:
-            import base64
-            # Check if it's base64 encoded
-            if log_content.startswith('base64:'):
-                decoded = base64.b64decode(log_content[7:]).decode('utf-8')
-                print("Loading log file from environment variable (base64)")
-                return load_logs_from_content(decoded)
-            else:
-                print("Loading log file from environment variable")
-                return load_logs_from_content(log_content)
-        except Exception as e:
-            print(f"Error loading from environment variable: {e}")
-    
-    # Fallback to local file (for development)
     try:
         with open(LOG_FILE, 'r', encoding='utf-8') as f:
-            print(f"Loading log file from local file: {LOG_FILE}")
-            content = f.read()
-            return load_logs_from_content(content)
+            for line_num, line in enumerate(f, 1):
+                try:
+                    entry = json.loads(line.strip())
+                    # Add line number for reference
+                    entry['line_number'] = line_num
+                    log_data.append(entry)
+                except json.JSONDecodeError:
+                    print(f"Warning: Could not parse line {line_num}")
+                    continue
     except FileNotFoundError:
-        print(f"Warning: {LOG_FILE} not found. No log data loaded.")
-        print("Tip: Set LOG_FILE_URL or BEELZEBUB_LOG_CONTENT environment variable, or upload a log file via /api/upload-log")
+        print(f"Error: {LOG_FILE} not found")
     
     return log_data
 
@@ -103,49 +49,9 @@ def parse_datetime(dt_str):
         return None
 
 
-@app.route('/api/upload-log', methods=['POST'])
-def upload_log():
-    """Upload log file via POST request"""
-    global log_data
-    
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file provided'}), 400
-    
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No file selected'}), 400
-    
-    # Read file content
-    try:
-        content = file.read().decode('utf-8')
-        load_logs_from_content(content)
-        return jsonify({
-            'message': 'Log file uploaded successfully',
-            'entries': len(log_data)
-        })
-    except Exception as e:
-        return jsonify({'error': f'Error processing file: {str(e)}'}), 500
-
-
-@app.route('/api/log-status')
-def log_status():
-    """Check if log data is loaded"""
-    return jsonify({
-        'loaded': len(log_data) > 0,
-        'entries': len(log_data)
-    })
-
-
 @app.route('/')
 def index():
     """Render main dashboard page"""
-    # Lazy load logs on first request if not already loaded
-    global log_data
-    if not log_data:
-        try:
-            load_logs()
-        except Exception as e:
-            print(f"Warning: Could not load logs: {e}")
     return render_template('index.html')
 
 
@@ -653,19 +559,6 @@ def export_credentials(format):
             headers={'Content-Disposition': 'attachment; filename=credentials.json'}
         )
 
-
-# Initialize log data on import (for Vercel)
-# Note: In serverless, this runs on cold start
-# Only load if explicitly requested to avoid errors on import
-# Disable auto-loading on import to prevent crashes - load on first request instead
-# if os.environ.get('VERCEL') or os.environ.get('LOG_FILE_URL') or os.environ.get('BEELZEBUB_LOG_CONTENT'):
-#     try:
-#         print("Vercel/serverless environment detected. Loading logs...")
-#         load_logs()
-#         print(f"Loaded {len(log_data)} log entries")
-#     except Exception as e:
-#         print(f"Warning: Could not load logs on import: {e}")
-#         # Continue without logs - user can upload later
 
 if __name__ == '__main__':
     print("Loading log data...")
