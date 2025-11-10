@@ -4,28 +4,54 @@ Vercel serverless function handler for Flask app
 import sys
 import os
 import io
-import json
+import traceback
 
 # Add parent directory to Python path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, parent_dir)
 
-from app import app
+# Try to import app, but handle errors gracefully
+try:
+    from app import app
+except Exception as e:
+    # If import fails, create a minimal error handler
+    print(f"Error importing app: {e}", file=sys.stderr)
+    print(traceback.format_exc(), file=sys.stderr)
+    
+    # Create a minimal Flask app for error reporting
+    from flask import Flask
+    app = Flask(__name__)
+    
+    @app.route('/')
+    def error():
+        return f"Error loading application: {str(e)}", 500
 
 def handler(request):
     """
     Vercel serverless function handler
     """
     try:
-        # Get request attributes (Vercel format)
-        method = getattr(request, 'method', 'GET')
-        path = getattr(request, 'path', '/')
+        # Vercel request object attributes
+        method = getattr(request, 'method', 'GET') or 'GET'
+        path = getattr(request, 'path', '/') or '/'
         query_string = getattr(request, 'query_string', '') or ''
         headers = getattr(request, 'headers', {}) or {}
         body = getattr(request, 'body', b'') or b''
+        url = getattr(request, 'url', '') or ''
+        
+        # Extract path from URL if path is not set correctly
+        if not path or path == '/' and url:
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(url)
+                path = parsed.path or '/'
+                query_string = parsed.query or ''
+            except:
+                pass
         
         # Build WSGI environ
         environ = {
-            'REQUEST_METHOD': method,
+            'REQUEST_METHOD': method.upper(),
             'SCRIPT_NAME': '',
             'PATH_INFO': path,
             'QUERY_STRING': query_string,
@@ -43,7 +69,7 @@ def handler(request):
             'wsgi.run_once': False,
         }
         
-        # Add all headers
+        # Add all headers to environ
         for key, value in headers.items():
             key_upper = key.upper().replace('-', '_')
             if key_upper not in ('CONTENT_TYPE', 'CONTENT_LENGTH'):
@@ -62,12 +88,15 @@ def handler(request):
         
         # Collect response body
         body_parts = []
-        for chunk in body_iter:
-            if chunk:
-                if isinstance(chunk, bytes):
-                    body_parts.append(chunk)
-                else:
-                    body_parts.append(chunk.encode('utf-8'))
+        try:
+            for chunk in body_iter:
+                if chunk:
+                    if isinstance(chunk, bytes):
+                        body_parts.append(chunk)
+                    else:
+                        body_parts.append(str(chunk).encode('utf-8'))
+        except Exception as e:
+            print(f"Error reading body: {e}", file=sys.stderr)
         
         body_bytes = b''.join(body_parts)
         
@@ -92,11 +121,10 @@ def handler(request):
         }
         
     except Exception as e:
-        import traceback
         error_msg = f"Handler Error: {str(e)}\n{traceback.format_exc()}"
         print(error_msg, file=sys.stderr)
         return {
             'statusCode': 500,
-            'headers': {'Content-Type': 'text/plain'},
+            'headers': {'Content-Type': 'text/plain; charset=utf-8'},
             'body': error_msg
         }
