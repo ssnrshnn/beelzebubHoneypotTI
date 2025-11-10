@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beelzebub Honeypot Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1><i class="fas fa-shield-alt"></i> Beelzebub Honeypot Dashboard</h1>
+                <p class="subtitle">Comprehensive Security Event Analysis</p>
+            </div>
+            <button id="refreshBtn" class="btn btn-refresh">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-tab="dashboard">
+                <i class="fas fa-chart-line"></i> Dashboard
+            </button>
+            <button class="nav-tab" data-tab="ips">
+                <i class="fas fa-network-wired"></i> All IP Addresses
+            </button>
+            <button class="nav-tab" data-tab="credentials">
+                <i class="fas fa-key"></i> Credentials
+            </button>
+        </nav>
+
+        <!-- Dashboard Tab Content -->
+        <div id="dashboard-tab" class="tab-content active">
+        <!-- Statistics Cards -->
+        <section class="stats-section">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-info">
+                        <p class="stat-label">Total Events</p>
+                        <h2 class="stat-value" id="totalEvents">0</h2>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                        <i class="fas fa-network-wired"></i>
+                    </div>
+                    <div class="stat-info">
+                        <p class="stat-label">Unique IPs</p>
+                        <h2 class="stat-value" id="uniqueIPs">0</h2>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                        <i class="fas fa-shield-virus"></i>
+                    </div>
+                    <div class="stat-info">
+                        <p class="stat-label">Attack Types</p>
+                        <h2 class="stat-value" id="attackTypes">0</h2>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                    <div class="stat-info">
+                        <p class="stat-label">Protocols</p>
+                        <h2 class="stat-value" id="protocolCount">0</h2>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Charts Section -->
+        <section class="charts-section">
+            <div class="chart-container">
+                <h3><i class="fas fa-chart-bar"></i> Event Timeline</h3>
+                <canvas id="timelineChart"></canvas>
+            </div>
+
+            <div class="chart-row">
+                <div class="chart-container chart-small">
+                    <h3><i class="fas fa-server"></i> Top Protocols</h3>
+                    <canvas id="protocolChart"></canvas>
+                </div>
+
+                <div class="chart-container chart-small">
+                    <h3><i class="fas fa-exclamation-triangle"></i> Event Levels</h3>
+                    <canvas id="levelChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-row">
+                <div class="chart-container chart-small">
+                    <h3><i class="fas fa-code"></i> HTTP Methods</h3>
+                    <canvas id="methodChart"></canvas>
+                </div>
+
+                <div class="chart-container chart-small">
+                    <h3><i class="fas fa-laptop"></i> Top User Agents</h3>
+                    <div id="userAgentList" class="list-container"></div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3><i class="fas fa-map-marker-alt"></i> Top Source IPs</h3>
+                <div id="ipList" class="list-container"></div>
+            </div>
+        </section>
+
+        <!-- Filters Section -->
+        <section class="filters-section">
+            <h3><i class="fas fa-filter"></i> Advanced Filters</h3>
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label for="filterProtocol">Protocol</label>
+                    <select id="filterProtocol" class="filter-input">
+                        <option value="">All Protocols</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="filterLevel">Level</label>
+                    <select id="filterLevel" class="filter-input">
+                        <option value="">All Levels</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="filterIP">Source IP</label>
+                    <select id="filterIP" class="filter-input">
+                        <option value="">All IPs</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="filterDescription">Service</label>
+                    <select id="filterDescription" class="filter-input">
+                        <option value="">All Services</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="filterStartDate">Start Date</label>
+                    <input type="datetime-local" id="filterStartDate" class="filter-input">
+                </div>
+
+                <div class="filter-group">
+                    <label for="filterEndDate">End Date</label>
+                    <input type="datetime-local" id="filterEndDate" class="filter-input">
+                </div>
+
+                <div class="filter-group">
+                    <label for="filterSearch">Search</label>
+                    <input type="text" id="filterSearch" class="filter-input" placeholder="Search logs...">
+                </div>
+
+                <div class="filter-group filter-actions">
+                    <button id="applyFilters" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Apply Filters
+                    </button>
+                    <button id="clearFilters" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Clear
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Logs Table -->
+        <section class="logs-section">
+            <div class="logs-header">
+                <h3><i class="fas fa-list"></i> Event Logs</h3>
+                <div class="logs-controls">
+                    <label for="perPage">Per page:</label>
+                    <select id="perPage" class="filter-input">
+                        <option value="25">25</option>
+                        <option value="50" selected>50</option>
+                        <option value="100">100</option>
+                        <option value="250">250</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="logs-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Level</th>
+                            <th>Protocol</th>
+                            <th>Source IP</th>
+                            <th>Description</th>
+                            <th>Message</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsTableBody">
+                        <tr>
+                            <td colspan="7" class="loading">
+                                <i class="fas fa-spinner fa-spin"></i> Loading logs...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination">
+                <button id="prevPage" class="btn btn-pagination">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </button>
+                <span id="pageInfo" class="page-info">Page 1 of 1</span>
+                <button id="nextPage" class="btn btn-pagination">
+                    Next <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </section>
+        </div>
+
+        <!-- All IP Addresses Tab Content -->
+        <div id="ips-tab" class="tab-content">
+            <section class="page-section">
+                <div class="page-header">
+                    <div class="page-header-content">
+                        <div>
+                            <h2><i class="fas fa-network-wired"></i> All IP Addresses</h2>
+                            <p class="page-subtitle">Complete list of all unique IP addresses found in the logs</p>
+                        </div>
+                        <div class="export-buttons">
+                            <button class="btn btn-export" onclick="exportIPs('txt')" title="Download as TXT">
+                                <i class="fas fa-file-alt"></i> TXT
+                            </button>
+                            <button class="btn btn-export" onclick="exportIPs('csv')" title="Download as CSV">
+                                <i class="fas fa-file-csv"></i> CSV
+                            </button>
+                            <button class="btn btn-export" onclick="exportIPs('json')" title="Download as JSON">
+                                <i class="fas fa-file-code"></i> JSON
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>IP Address</th>
+                                <th>Request Count</th>
+                                <th>First Seen</th>
+                                <th>Last Seen</th>
+                                <th>Protocols</th>
+                                <th>Services</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="allIPsTableBody">
+                            <tr>
+                                <td colspan="7" class="loading">
+                                    <i class="fas fa-spinner fa-spin"></i> Loading IP addresses...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <!-- Credentials Tab Content -->
+        <div id="credentials-tab" class="tab-content">
+            <section class="page-section">
+                <div class="page-header">
+                    <div class="page-header-content">
+                        <div>
+                            <h2><i class="fas fa-key"></i> Credentials</h2>
+                            <p class="page-subtitle">Username and password combinations captured by the honeypot</p>
+                        </div>
+                        <div class="export-buttons">
+                            <button class="btn btn-export" onclick="exportCredentials('txt')" title="Download as TXT">
+                                <i class="fas fa-file-alt"></i> TXT
+                            </button>
+                            <button class="btn btn-export" onclick="exportCredentials('csv')" title="Download as CSV">
+                                <i class="fas fa-file-csv"></i> CSV
+                            </button>
+                            <button class="btn btn-export" onclick="exportCredentials('json')" title="Download as JSON">
+                                <i class="fas fa-file-code"></i> JSON
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Password</th>
+                                <th>Attempts</th>
+                                <th>Source IP</th>
+                            </tr>
+                        </thead>
+                        <tbody id="credentialsTableBody">
+                            <tr>
+                                <td colspan="4" class="loading">
+                                    <i class="fas fa-spinner fa-spin"></i> Loading credentials...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="pagination">
+                    <button id="prevCredPage" class="btn btn-pagination">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </button>
+                    <span id="credPageInfo" class="page-info">Page 1 of 1</span>
+                    <button id="nextCredPage" class="btn btn-pagination">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Modal for Event Details -->
+    <div id="eventModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2><i class="fas fa-info-circle"></i> Event Details</h2>
+            <div id="eventDetails" class="event-details"></div>
+        </div>
+    </div>
+
+    <!-- IP Analysis Modal -->
+    <div id="ipModal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="close-ip">&times;</span>
+            <h2><i class="fas fa-search"></i> IP Analysis: <span id="ipAnalysisTitle"></span></h2>
+            <div id="ipAnalysisContent" class="ip-analysis-content"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
+
