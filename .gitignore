@@ -35,8 +35,6 @@ instance/
 *~
 .DS_Store
 
-# Logs (exclude actual log files from repo)
-*.log
 
 # Environment variables
 .env
