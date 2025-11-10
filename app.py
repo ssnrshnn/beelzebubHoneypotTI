@@ -643,10 +643,15 @@ def export_credentials(format):
 
 # Initialize log data on import (for Vercel)
 # Note: In serverless, this runs on cold start
-if os.environ.get('VERCEL') or os.environ.get('LOG_FILE_URL') or os.environ.get('BEELZEBUB_LOG_CONTENT'):
-    print("Vercel/serverless environment detected. Loading logs...")
-    load_logs()
-    print(f"Loaded {len(log_data)} log entries")
+# Only load if explicitly requested to avoid errors on import
+try:
+    if os.environ.get('VERCEL') or os.environ.get('LOG_FILE_URL') or os.environ.get('BEELZEBUB_LOG_CONTENT'):
+        print("Vercel/serverless environment detected. Loading logs...")
+        load_logs()
+        print(f"Loaded {len(log_data)} log entries")
+except Exception as e:
+    print(f"Warning: Could not load logs on import: {e}")
+    # Continue without logs - user can upload later
 
 if __name__ == '__main__':
     print("Loading log data...")
