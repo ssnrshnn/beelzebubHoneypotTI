@@ -14,7 +14,13 @@ import io
 import os
 import tempfile
 
-app = Flask(__name__)
+# Set Flask app with explicit paths for Vercel compatibility
+app = Flask(
+    __name__,
+    template_folder='templates',
+    static_folder='static',
+    static_url_path='/static'
+)
 
 # Global variable to cache log data
 log_data = []

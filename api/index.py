@@ -1,55 +1,106 @@
 """
 Vercel serverless function handler for Flask app
+Minimal implementation to avoid import crashes
 """
 import sys
 import os
-import io
-import traceback
 
 # Add parent directory to Python path
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, parent_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
 
-# Try to import app, but handle errors gracefully
+# Import with comprehensive error handling
+app = None
+import_error = None
+import traceback
+
 try:
+    # Set working directory to ensure templates/static are found
+    os.chdir(parent_dir)
     from app import app
+    print("Successfully imported app", file=sys.stderr)
+except ImportError as e:
+    import_error = f"ImportError: {str(e)}"
+    traceback.print_exc(file=sys.stderr)
+    # Try to create minimal Flask app
+    try:
+        from flask import Flask
+        app = Flask(__name__)
+        @app.route('/')
+        def error():
+            return f"Import Error: {import_error}<pre>{traceback.format_exc()}</pre>", 500
+    except Exception as e2:
+        print(f"Failed to create error app: {e2}", file=sys.stderr)
+        app = None
 except Exception as e:
-    # If import fails, create a minimal error handler
-    print(f"Error importing app: {e}", file=sys.stderr)
-    print(traceback.format_exc(), file=sys.stderr)
-    
-    # Create a minimal Flask app for error reporting
-    from flask import Flask
-    app = Flask(__name__)
-    
-    @app.route('/')
-    def error():
-        return f"Error loading application: {str(e)}", 500
+    import_error = f"Error: {str(e)}"
+    traceback.print_exc(file=sys.stderr)
+    try:
+        from flask import Flask
+        app = Flask(__name__)
+        @app.route('/')
+        def error():
+            return f"Error loading app: {import_error}<pre>{traceback.format_exc()}</pre>", 500
+    except:
+        app = None
 
 def handler(request):
     """
     Vercel serverless function handler
     """
+    # Check if app was imported successfully
+    if app is None:
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'text/plain; charset=utf-8'},
+            'body': f'Application failed to load. Import error: {import_error or "Unknown error"}'
+        }
+    
     try:
-        # Vercel request object attributes
-        method = getattr(request, 'method', 'GET') or 'GET'
-        path = getattr(request, 'path', '/') or '/'
-        query_string = getattr(request, 'query_string', '') or ''
-        headers = getattr(request, 'headers', {}) or {}
-        body = getattr(request, 'body', b'') or b''
-        url = getattr(request, 'url', '') or ''
+        # Get request attributes - handle different Vercel request formats
+        method = 'GET'
+        path = '/'
+        query_string = ''
+        headers = {}
+        body = b''
         
-        # Extract path from URL if path is not set correctly
-        if not path or path == '/' and url:
-            try:
-                from urllib.parse import urlparse
-                parsed = urlparse(url)
-                path = parsed.path or '/'
-                query_string = parsed.query or ''
-            except:
-                pass
+        # Try different ways to access request
+        if hasattr(request, 'method'):
+            method = request.method or 'GET'
+        elif hasattr(request, 'httpMethod'):
+            method = request.httpMethod or 'GET'
+            
+        if hasattr(request, 'path'):
+            path = request.path or '/'
+        elif hasattr(request, 'rawPath'):
+            path = request.rawPath or '/'
+        elif hasattr(request, 'url'):
+            from urllib.parse import urlparse
+            parsed = urlparse(request.url)
+            path = parsed.path or '/'
+            query_string = parsed.query or ''
+        
+        if hasattr(request, 'query_string'):
+            query_string = request.query_string or ''
+        elif hasattr(request, 'rawQueryString'):
+            query_string = request.rawQueryString or ''
+            
+        if hasattr(request, 'headers'):
+            headers = request.headers or {}
+        elif hasattr(request, 'multiValueHeaders'):
+            # Convert multiValueHeaders to single value headers
+            headers = {}
+            for k, v in (request.multiValueHeaders or {}).items():
+                headers[k] = v[0] if isinstance(v, list) and v else v
+        
+        if hasattr(request, 'body'):
+            body = request.body or b''
+        elif hasattr(request, 'rawBody'):
+            body = request.rawBody or b''
         
         # Build WSGI environ
+        import io
         environ = {
             'REQUEST_METHOD': method.upper(),
             'SCRIPT_NAME': '',
@@ -69,7 +120,7 @@ def handler(request):
             'wsgi.run_once': False,
         }
         
-        # Add all headers to environ
+        # Add headers
         for key, value in headers.items():
             key_upper = key.upper().replace('-', '_')
             if key_upper not in ('CONTENT_TYPE', 'CONTENT_LENGTH'):
@@ -86,34 +137,25 @@ def handler(request):
         # Call Flask app
         body_iter = app(environ, start_response)
         
-        # Collect response body
+        # Collect response
         body_parts = []
-        try:
-            for chunk in body_iter:
-                if chunk:
-                    if isinstance(chunk, bytes):
-                        body_parts.append(chunk)
-                    else:
-                        body_parts.append(str(chunk).encode('utf-8'))
-        except Exception as e:
-            print(f"Error reading body: {e}", file=sys.stderr)
+        for chunk in body_iter:
+            if chunk:
+                body_parts.append(chunk if isinstance(chunk, bytes) else str(chunk).encode('utf-8'))
         
         body_bytes = b''.join(body_parts)
         
-        # Parse status code
+        # Parse status
         status_code = 200
         if status[0]:
             try:
                 status_code = int(status[0].split()[0])
             except:
-                status_code = 200
+                pass
         
-        # Convert headers to dict
-        headers_dict = {}
-        if response_headers[0]:
-            headers_dict = {k: v for k, v in response_headers[0]}
+        # Convert headers
+        headers_dict = {k: v for k, v in (response_headers[0] or [])}
         
-        # Return response
         return {
             'statusCode': status_code,
             'headers': headers_dict,
@@ -121,6 +163,7 @@ def handler(request):
         }
         
     except Exception as e:
+        import traceback
         error_msg = f"Handler Error: {str(e)}\n{traceback.format_exc()}"
         print(error_msg, file=sys.stderr)
         return {
