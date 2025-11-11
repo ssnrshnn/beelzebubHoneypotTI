@@ -9,13 +9,24 @@ let charts = {};
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
-    loadStatistics();
-    loadFilterOptions();
-    loadLogs();
+    // Only load what exists on the current page
+    if (document.getElementById('timelineChart')) {
+        loadStatistics();
+    }
+    if (document.getElementById('logsTableBody')) {
+        loadFilterOptions();
+        loadLogs();
+    }
+    if (document.getElementById('allIPsTableBody')) {
+        loadAllIPs();
+    }
+    if (document.getElementById('credentialsTableBody')) {
+        loadCredentials();
+    }
     setupEventListeners();
-    setupTabNavigation();
-    loadAllIPs();
-    loadCredentials();
+    if (document.querySelectorAll('.nav-tab').length > 0) {
+        setupTabNavigation();
+    }
 });
 
 // Setup tab navigation
@@ -53,65 +64,92 @@ function setupTabNavigation() {
 
 // Setup event listeners
 function setupEventListeners() {
-    document.getElementById('refreshBtn').addEventListener('click', () => {
-        const activeTab = document.querySelector('.nav-tab.active')?.getAttribute('data-tab');
-        
-        if (activeTab === 'dashboard') {
-            loadStatistics();
+    const refreshBtn = document.getElementById('refreshBtn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+            // Refresh what exists on the current page
+            if (document.getElementById('timelineChart')) {
+                loadStatistics();
+            }
+            if (document.getElementById('logsTableBody')) {
+                loadLogs();
+            }
+            if (document.getElementById('allIPsTableBody')) {
+                loadAllIPs();
+            }
+            if (document.getElementById('credentialsTableBody')) {
+                loadCredentials();
+            }
+        });
+    }
+
+    const applyFiltersBtn = document.getElementById('applyFilters');
+    if (applyFiltersBtn) {
+        applyFiltersBtn.addEventListener('click', () => {
+            currentPage = 1;
             loadLogs();
-        } else if (activeTab === 'ips') {
-            loadAllIPs();
-        } else if (activeTab === 'credentials') {
-            loadCredentials();
-        }
-    });
+        });
+    }
 
-    document.getElementById('applyFilters').addEventListener('click', () => {
-        currentPage = 1;
-        loadLogs();
-    });
-
-    document.getElementById('clearFilters').addEventListener('click', () => {
-        document.getElementById('filterProtocol').value = '';
-        document.getElementById('filterLevel').value = '';
-        document.getElementById('filterIP').value = '';
-        document.getElementById('filterDescription').value = '';
-        document.getElementById('filterStartDate').value = '';
-        document.getElementById('filterEndDate').value = '';
-        document.getElementById('filterSearch').value = '';
-        currentPage = 1;
-        loadLogs();
-    });
-
-    document.getElementById('prevPage').addEventListener('click', () => {
-        if (currentPage > 1) {
-            currentPage--;
+    const clearFiltersBtn = document.getElementById('clearFilters');
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', () => {
+            document.getElementById('filterProtocol').value = '';
+            document.getElementById('filterLevel').value = '';
+            document.getElementById('filterIP').value = '';
+            document.getElementById('filterDescription').value = '';
+            document.getElementById('filterStartDate').value = '';
+            document.getElementById('filterEndDate').value = '';
+            document.getElementById('filterSearch').value = '';
+            currentPage = 1;
             loadLogs();
-        }
-    });
+        });
+    }
 
-    document.getElementById('nextPage').addEventListener('click', () => {
-        currentPage++;
-        loadLogs();
-    });
+    const prevPageBtn = document.getElementById('prevPage');
+    if (prevPageBtn) {
+        prevPageBtn.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                loadLogs();
+            }
+        });
+    }
 
-    document.getElementById('perPage').addEventListener('change', (e) => {
-        perPage = parseInt(e.target.value);
-        currentPage = 1;
-        loadLogs();
-    });
+    const nextPageBtn = document.getElementById('nextPage');
+    if (nextPageBtn) {
+        nextPageBtn.addEventListener('click', () => {
+            currentPage++;
+            loadLogs();
+        });
+    }
 
-    document.getElementById('prevCredPage').addEventListener('click', () => {
-        if (credPage > 1) {
-            credPage--;
+    const perPageSelect = document.getElementById('perPage');
+    if (perPageSelect) {
+        perPageSelect.addEventListener('change', (e) => {
+            perPage = parseInt(e.target.value);
+            currentPage = 1;
+            loadLogs();
+        });
+    }
+
+    const prevCredBtn = document.getElementById('prevCredPage');
+    if (prevCredBtn) {
+        prevCredBtn.addEventListener('click', () => {
+            if (credPage > 1) {
+                credPage--;
+                loadCredentials();
+            }
+        });
+    }
+
+    const nextCredBtn = document.getElementById('nextCredPage');
+    if (nextCredBtn) {
+        nextCredBtn.addEventListener('click', () => {
+            credPage++;
             loadCredentials();
-        }
-    });
-
-    document.getElementById('nextCredPage').addEventListener('click', () => {
-        credPage++;
-        loadCredentials();
-    });
+        });
+    }
 
     // All IPs pagination
     const prevIPsBtn = document.getElementById('prevIPsPage');
@@ -129,13 +167,19 @@ function setupEventListeners() {
         });
     }
     // Modal close buttons
-    document.querySelector('.close').addEventListener('click', () => {
-        document.getElementById('eventModal').style.display = 'none';
-    });
+    const modalClose = document.querySelector('.close');
+    if (modalClose) {
+        modalClose.addEventListener('click', () => {
+            document.getElementById('eventModal').style.display = 'none';
+        });
+    }
 
-    document.querySelector('.close-ip').addEventListener('click', () => {
-        document.getElementById('ipModal').style.display = 'none';
-    });
+    const modalCloseIp = document.querySelector('.close-ip');
+    if (modalCloseIp) {
+        modalCloseIp.addEventListener('click', () => {
+            document.getElementById('ipModal').style.display = 'none';
+        });
+    }
 
     window.addEventListener('click', (e) => {
         if (e.target.id === 'eventModal') {
