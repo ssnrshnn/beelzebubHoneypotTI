@@ -199,15 +199,17 @@ async function loadStatistics() {
 
         // Update stat cards
         document.getElementById('totalEvents').textContent = stats.total_events.toLocaleString();
-        document.getElementById('uniqueIPs').textContent = Object.keys(stats.top_ips).length;
+        document.getElementById('uniqueIPs').textContent = (stats.unique_ips || 0).toLocaleString();
         document.getElementById('attackTypes').textContent = Object.keys(stats.descriptions).length;
         document.getElementById('protocolCount').textContent = Object.keys(stats.protocols).length;
 
         // Render charts
         renderTimelineChart(stats.timeline);
         renderProtocolChart(stats.protocols);
-        renderLevelChart(stats.levels);
         renderMethodChart(stats.http_methods);
+        renderDescriptionChart(stats.descriptions);
+        renderPathChart(stats.top_paths);
+        renderPortChart(stats.ports);
         renderIPList(stats.top_ips);
         renderUserAgentList(stats.top_user_agents);
 
@@ -602,6 +604,97 @@ function renderTimelineChart(data) {
                         color: 'rgba(168, 178, 209, 0.1)'
                     }
                 }
+            }
+        }
+    });
+}
+
+// Render top services (descriptions) chart
+function renderDescriptionChart(data) {
+    const ctx = document.getElementById('descriptionChart');
+    if (!ctx) return;
+    if (charts.descriptions) charts.descriptions.destroy();
+    charts.descriptions = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(data),
+            datasets: [{
+                label: 'Top Services',
+                data: Object.values(data),
+                backgroundColor: 'rgba(118, 75, 162, 0.8)',
+                borderColor: 'rgba(118, 75, 162, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: { legend: { display: false }, tooltip: { intersect: false } },
+            scales: {
+                x: { ticks: { color: '#a8b2d1' }, grid: { color: 'rgba(168, 178, 209, 0.1)' } },
+                y: { ticks: { color: '#a8b2d1' }, grid: { color: 'rgba(168, 178, 209, 0.1)' } }
+            }
+        }
+    });
+}
+
+// Render top paths chart
+function renderPathChart(data) {
+    const ctx = document.getElementById('pathChart');
+    if (!ctx) return;
+    if (charts.paths) charts.paths.destroy();
+    charts.paths = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(data),
+            datasets: [{
+                label: 'Top Paths',
+                data: Object.values(data),
+                backgroundColor: 'rgba(79, 172, 254, 0.8)',
+                borderColor: 'rgba(79, 172, 254, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: { legend: { display: false }, tooltip: { intersect: false } },
+            scales: {
+                x: { ticks: { color: '#a8b2d1', maxRotation: 45, minRotation: 45 }, grid: { color: 'rgba(168, 178, 209, 0.1)' } },
+                y: { ticks: { color: '#a8b2d1' }, grid: { color: 'rgba(168, 178, 209, 0.1)' } }
+            }
+        }
+    });
+}
+
+// Render ports chart
+function renderPortChart(data) {
+    const ctx = document.getElementById('portChart');
+    if (!ctx) return;
+    if (charts.ports) charts.ports.destroy();
+    charts.ports = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: Object.keys(data),
+            datasets: [{
+                data: Object.values(data),
+                backgroundColor: [
+                    'rgba(102, 126, 234, 0.8)',
+                    'rgba(118, 75, 162, 0.8)',
+                    'rgba(79, 172, 254, 0.8)',
+                    'rgba(67, 233, 123, 0.8)',
+                    'rgba(245, 87, 108, 0.8)',
+                    'rgba(255, 165, 2, 0.8)'
+                ],
+                borderWidth: 2,
+                borderColor: '#16213e'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { position: 'bottom', labels: { color: '#ffffff' } }
             }
         }
     });
