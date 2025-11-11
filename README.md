@@ -2,6 +2,8 @@
 
 A real-time web dashboard for analyzing [Beelzebub](https://github.com/mariocandela/beelzebub) honeypot logs with  filtering capabilities and a nice data visualizations.
 
+This dashboard is fed with real-world honeypot traffic, reflecting live attack behavior rather than synthetic data.
+
 
 ## Quick Start
 
@@ -51,6 +53,22 @@ Or from another machine on the network:
 ```
 http://YOUR_IP_ADDRESS:5000
 ```
+
+## Screenshots
+
+Below are some snapshots of the dashboard. Images are stored in the `screenshots/` directory and will render on GitHub. The screenshots showcase real attack data captured in the wild.
+
+![1](screenshots/1.png)
+
+![2](screenshots/2.png)
+
+![3](screenshots/3.png)
+
+![4](screenshots/4.png)
+
+![5](screenshots/5.png)
+
+![6](screenshots/6.png)
 
 ##  Configuration
 
@@ -132,14 +150,12 @@ The dashboard expects JSON-formatted log entries with this structure:
 
 ```
 beelzebub-dashboard/
-├── app.py                  # Flask backend server
-├── beelzebub.log          # Your honeypot logs (not in repo)
-├── beelzebub.log.example  # Example log format
-├── requirements.txt       # Python dependencies
-├── start_dashboard.sh     # Convenient start script
+├── app.py                # Flask backend server
+├── beelzebub.log         # Your honeypot logs (not in repo)
+├── requirements.txt      # Python dependencies
+├── start_dashboard.sh    # Convenient start script
 ├── README.md             # This file
-├── LICENSE               # MIT License
-├── .gitignore            # Git ignore rules
+├── screenshots/          # Dashboard screenshots shown below
 ├── templates/
 │   └── index.html        # Dashboard HTML
 └── static/
@@ -148,16 +164,3 @@ beelzebub-dashboard/
     └── js/
         └── app.js        # Dashboard functionality
 ```
-
-## 🚀 Future Enhancements
-
-- [ ] Authentication system
-- [ ] Database backend for better performance
-- [ ] Export filtered results to CSV/JSON
-- [ ] GeoIP location mapping
-- [ ] Real-time updates via WebSockets
-- [ ] Alert system for suspicious patterns
-- [ ] Machine learning threat detection
-- [ ] Integration with threat intelligence feeds
-
----
