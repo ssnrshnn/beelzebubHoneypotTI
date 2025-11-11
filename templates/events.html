@@ -156,6 +156,15 @@
         </div>
     </div>
 
+    <!-- IP Analysis Modal -->
+    <div id="ipModal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="close-ip">&times;</span>
+            <h2><i class="fas fa-search"></i> IP Analysis: <span id="ipAnalysisTitle"></span></h2>
+            <div id="ipAnalysisContent" class="ip-analysis-content"></div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>

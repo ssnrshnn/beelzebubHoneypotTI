@@ -203,6 +203,7 @@ def get_statistics():
     # Convert to lists for JSON
     return jsonify({
         'total_events': stats['total_events'],
+        'unique_ips': len(stats['source_ips']),
         'protocols': dict(stats['protocols'].most_common(10)),
         'levels': dict(stats['levels']),
         'top_ips': dict(stats['source_ips'].most_common(10)),
