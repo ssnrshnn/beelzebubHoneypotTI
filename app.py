@@ -5,7 +5,7 @@ A comprehensive dashboard for analyzing honeypot logs with advanced filtering
 """
 
 from flask import Flask, render_template, jsonify, request, Response
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 from collections import Counter, defaultdict
 import re
@@ -108,6 +108,12 @@ def get_logs():
         filtered_logs = [log for log in filtered_logs 
                         if search_lower in json.dumps(log).lower()]
     
+    # Sort by time descending (newest first)
+    def get_log_time(log):
+        dt = parse_datetime(log.get('time', ''))
+        return dt if dt else datetime.min.replace(tzinfo=timezone.utc)
+    filtered_logs.sort(key=get_log_time, reverse=True)
+
     # Pagination
     total = len(filtered_logs)
     start_idx = (page - 1) * per_page
@@ -292,6 +298,8 @@ def analyze_ip(ip):
 @app.route('/api/all-ips')
 def get_all_ips():
     """Get all unique IP addresses with statistics"""
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 50))
     ip_stats = defaultdict(lambda: {
         'count': 0,
         'first_seen': None,
@@ -340,7 +348,19 @@ def get_all_ips():
     # Sort by count descending
     result.sort(key=lambda x: x['count'], reverse=True)
     
-    return jsonify(result)
+    # Pagination
+    total = len(result)
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
+    paginated = result[start_idx:end_idx]
+    
+    return jsonify({
+        'ips': paginated,
+        'total': total,
+        'page': page,
+        'per_page': per_page,
+        'total_pages': (total + per_page - 1) // per_page
+    })
 
 
 @app.route('/api/credentials')

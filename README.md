@@ -25,14 +25,6 @@ cd beelzebubHoneypot
 pip install -r requirements.txt
 ```
 
-3. **Prepare your log file:**
-```bash
-# Copy your Beelzebub log file to the dashboard directory
-cp /path/to/your/beelzebub.log .
-
-# Or use the example file to test
-cp beelzebub.log.example beelzebub.log
-```
 
 ### Running the Dashboard
 
