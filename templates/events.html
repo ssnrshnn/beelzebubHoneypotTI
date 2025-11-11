@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Logs - Beelzebub Honeypot Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1><i class="fas fa-list"></i> Event Logs</h1>
+                <p class="subtitle">Advanced Filters and Real-time Log View</p>
+            </div>
+            <button id="refreshBtn" class="btn btn-refresh">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs">
+            <button class="nav-tab" onclick="window.location='{{ url_for('index') }}'">
+                <i class="fas fa-chart-line"></i> Dashboard
+            </button>
+            <button class="nav-tab active">
+                <i class="fas fa-list"></i> Event Logs
+            </button>
+            <button class="nav-tab" onclick="window.location='{{ url_for('index') }}#ips'">
+                <i class="fas fa-network-wired"></i> All IP Addresses
+            </button>
+            <button class="nav-tab" onclick="window.location='{{ url_for('index') }}#credentials'">
+                <i class="fas fa-key"></i> Credentials
+            </button>
+        </nav>
+
+        <!-- Filters Section -->
+        <section class="filters-section">
+            <h3><i class="fas fa-filter"></i> Advanced Filters</h3>
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label for="filterProtocol">Protocol</label>
+                    <select id="filterProtocol" class="filter-input">
+                        <option value="">All Protocols</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="filterLevel">Level</label>
+                    <select id="filterLevel" class="filter-input">
+                        <option value="">All Levels</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="filterIP">Source IP</label>
+                    <select id="filterIP" class="filter-input">
+                        <option value="">All IPs</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="filterDescription">Service</label>
+                    <select id="filterDescription" class="filter-input">
+                        <option value="">All Services</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="filterStartDate">Start Date</label>
+                    <input type="datetime-local" id="filterStartDate" class="filter-input">
+                </div>
+
+                <div class="filter-group">
+                    <label for="filterEndDate">End Date</label>
+                    <input type="datetime-local" id="filterEndDate" class="filter-input">
+                </div>
+
+                <div class="filter-group">
+                    <label for="filterSearch">Search</label>
+                    <input type="text" id="filterSearch" class="filter-input" placeholder="Search logs...">
+                </div>
+
+                <div class="filter-group filter-actions">
+                    <button id="applyFilters" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Apply Filters
+                    </button>
+                    <button id="clearFilters" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Clear
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Logs Table -->
+        <section class="logs-section">
+            <div class="logs-header">
+                <div>
+                    <h3><i class="fas fa-list"></i> Event Logs</h3>
+                    <p class="page-subtitle">Newest to oldest</p>
+                </div>
+                <div class="logs-controls">
+                    <label for="perPage">Per page:</label>
+                    <select id="perPage" class="filter-input">
+                        <option value="25">25</option>
+                        <option value="50" selected>50</option>
+                        <option value="100">100</option>
+                        <option value="250">250</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="logs-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Level</th>
+                            <th>Protocol</th>
+                            <th>Source IP</th>
+                            <th>Description</th>
+                            <th>Message</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsTableBody">
+                        <tr>
+                            <td colspan="7" class="loading">
+                                <i class="fas fa-spinner fa-spin"></i> Loading logs...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination">
+                <button id="prevPage" class="btn btn-pagination">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </button>
+                <span id="pageInfo" class="page-info">Page 1 of 1</span>
+                <button id="nextPage" class="btn btn-pagination">
+                    Next <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <!-- Modal for Event Details -->
+    <div id="eventModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2><i class="fas fa-info-circle"></i> Event Details</h2>
+            <div id="eventDetails" class="event-details"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
+
+

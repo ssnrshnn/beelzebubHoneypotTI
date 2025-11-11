@@ -54,6 +54,11 @@ def index():
     """Render main dashboard page"""
     return render_template('index.html')
 
+@app.route('/events')
+def events():
+    """Render events page (Filters + Event Logs)"""
+    return render_template('events.html')
+
 
 @app.route('/api/logs')
 def get_logs():
