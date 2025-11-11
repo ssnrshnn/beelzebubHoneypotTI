@@ -3,6 +3,8 @@ let currentPage = 1;
 let perPage = 50;
 let credPage = 1;
 let credPerPage = 50;
+let ipPage = 1;
+let ipPerPage = 50;
 let charts = {};
 
 // Initialize dashboard
@@ -111,6 +113,21 @@ function setupEventListeners() {
         loadCredentials();
     });
 
+    // All IPs pagination
+    const prevIPsBtn = document.getElementById('prevIPsPage');
+    const nextIPsBtn = document.getElementById('nextIPsPage');
+    if (prevIPsBtn && nextIPsBtn) {
+        prevIPsBtn.addEventListener('click', () => {
+            if (ipPage > 1) {
+                ipPage--;
+                loadAllIPs();
+            }
+        });
+        nextIPsBtn.addEventListener('click', () => {
+            ipPage++;
+            loadAllIPs();
+        });
+    }
     // Modal close buttons
     document.querySelector('.close').addEventListener('click', () => {
         document.getElementById('eventModal').style.display = 'none';
@@ -790,17 +807,21 @@ async function loadAllIPs() {
     tbody.innerHTML = '<tr><td colspan="7" class="loading"><i class="fas fa-spinner fa-spin"></i> Loading IP addresses...</td></tr>';
     
     try {
-        const response = await fetch('/api/all-ips');
-        const ips = await response.json();
+        const params = new URLSearchParams({
+            page: ipPage,
+            per_page: ipPerPage
+        });
+        const response = await fetch(`/api/all-ips?${params}`);
+        const data = await response.json();
         
         tbody.innerHTML = '';
         
-        if (ips.length === 0) {
+        if (!data.ips || data.ips.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7" class="loading">No IP addresses found</td></tr>';
             return;
         }
         
-        ips.forEach(ipData => {
+        data.ips.forEach(ipData => {
             const row = document.createElement('tr');
             
             const firstSeen = ipData.first_seen ? new Date(ipData.first_seen).toLocaleString() : 'N/A';
@@ -855,6 +876,16 @@ async function loadAllIPs() {
             
             tbody.appendChild(row);
         });
+        
+        // Update pagination controls
+        const ipsInfo = document.getElementById('ipsPageInfo');
+        const prevBtn = document.getElementById('prevIPsPage');
+        const nextBtn = document.getElementById('nextIPsPage');
+        if (ipsInfo && prevBtn && nextBtn) {
+            ipsInfo.textContent = `Page ${data.page} of ${data.total_pages} (${data.total.toLocaleString()} IPs)`;
+            prevBtn.disabled = data.page === 1;
+            nextBtn.disabled = data.page === data.total_pages;
+        }
         
     } catch (error) {
         console.error('Error loading IP addresses:', error);
