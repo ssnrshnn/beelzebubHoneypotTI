@@ -845,17 +845,53 @@ canvas {
     padding: 8px;
     background: var(--hover-bg);
     border-radius: 6px;
+    gap: 8px;
+    align-items: flex-start;
 }
 
 .detail-label {
     font-weight: 600;
     color: var(--text-primary);
-    min-width: 150px;
+    min-width: 100px;
+    flex-shrink: 0;
 }
 
 .detail-value {
     color: var(--text-secondary);
     word-break: break-all;
+    flex: 1;
+}
+
+/* Stack output below label */
+.detail-row-output {
+    flex-direction: column;
+    gap: 8px;
+}
+
+.detail-row-output .detail-label {
+    min-width: auto;
+    margin-bottom: 0;
+}
+
+.detail-row-output .detail-value {
+    width: 100%;
+}
+
+.command-output {
+    background: #0f0c29;
+    padding: 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 500px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    margin: 0;
 }
 
 .ip-analysis-content {

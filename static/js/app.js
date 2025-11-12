@@ -392,14 +392,22 @@ async function viewEventDetails(lineNumber) {
     }
 }
 
+// Escape HTML entities
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // Render event details
 function renderEventDetails(event) {
     let html = '<div class="detail-section">';
     html += '<h4>Basic Information</h4>';
-    html += `<div class="detail-row"><div class="detail-label">Time:</div><div class="detail-value">${new Date(event.time).toLocaleString()}</div></div>`;
-    html += `<div class="detail-row"><div class="detail-label">Level:</div><div class="detail-value">${event.level}</div></div>`;
-    html += `<div class="detail-row"><div class="detail-label">Message:</div><div class="detail-value">${event.msg}</div></div>`;
-    html += `<div class="detail-row"><div class="detail-label">Line Number:</div><div class="detail-value">${event.line_number}</div></div>`;
+    html += `<div class="detail-row"><div class="detail-label">Time:</div><div class="detail-value">${escapeHtml(new Date(event.time).toLocaleString())}</div></div>`;
+    html += `<div class="detail-row"><div class="detail-label">Level:</div><div class="detail-value">${escapeHtml(event.level)}</div></div>`;
+    html += `<div class="detail-row"><div class="detail-label">Message:</div><div class="detail-value">${escapeHtml(event.msg)}</div></div>`;
+    html += `<div class="detail-row"><div class="detail-label">Line Number:</div><div class="detail-value">${escapeHtml(event.line_number)}</div></div>`;
     html += '</div>';
 
     if (event.event) {
@@ -407,23 +415,23 @@ function renderEventDetails(event) {
 
         html += '<div class="detail-section">';
         html += '<h4>Event Details</h4>';
-        if (evt.Protocol) html += `<div class="detail-row"><div class="detail-label">Protocol:</div><div class="detail-value">${evt.Protocol}</div></div>`;
-        if (evt.SourceIp) html += `<div class="detail-row"><div class="detail-label">Source IP:</div><div class="detail-value">${evt.SourceIp}</div></div>`;
-        if (evt.SourcePort) html += `<div class="detail-row"><div class="detail-label">Source Port:</div><div class="detail-value">${evt.SourcePort}</div></div>`;
-        if (evt.RemoteAddr) html += `<div class="detail-row"><div class="detail-label">Remote Address:</div><div class="detail-value">${evt.RemoteAddr}</div></div>`;
-        if (evt.Description) html += `<div class="detail-row"><div class="detail-label">Description:</div><div class="detail-value">${evt.Description}</div></div>`;
-        if (evt.Status) html += `<div class="detail-row"><div class="detail-label">Status:</div><div class="detail-value">${evt.Status}</div></div>`;
+        if (evt.Protocol) html += `<div class="detail-row"><div class="detail-label">Protocol:</div><div class="detail-value">${escapeHtml(evt.Protocol)}</div></div>`;
+        if (evt.SourceIp) html += `<div class="detail-row"><div class="detail-label">Source IP:</div><div class="detail-value">${escapeHtml(evt.SourceIp)}</div></div>`;
+        if (evt.SourcePort) html += `<div class="detail-row"><div class="detail-label">Source Port:</div><div class="detail-value">${escapeHtml(evt.SourcePort)}</div></div>`;
+        if (evt.RemoteAddr) html += `<div class="detail-row"><div class="detail-label">Remote Address:</div><div class="detail-value">${escapeHtml(evt.RemoteAddr)}</div></div>`;
+        if (evt.Description) html += `<div class="detail-row"><div class="detail-label">Description:</div><div class="detail-value">${escapeHtml(evt.Description)}</div></div>`;
+        if (evt.Status) html += `<div class="detail-row"><div class="detail-label">Status:</div><div class="detail-value">${escapeHtml(evt.Status)}</div></div>`;
         html += '</div>';
 
         if (evt.HTTPMethod || evt.RequestURI) {
             html += '<div class="detail-section">';
             html += '<h4>HTTP Details</h4>';
-            if (evt.HTTPMethod) html += `<div class="detail-row"><div class="detail-label">Method:</div><div class="detail-value">${evt.HTTPMethod}</div></div>`;
-            if (evt.RequestURI) html += `<div class="detail-row"><div class="detail-label">Request URI:</div><div class="detail-value">${evt.RequestURI}</div></div>`;
-            if (evt.HostHTTPRequest) html += `<div class="detail-row"><div class="detail-label">Host:</div><div class="detail-value">${evt.HostHTTPRequest}</div></div>`;
-            if (evt.UserAgent) html += `<div class="detail-row"><div class="detail-label">User Agent:</div><div class="detail-value">${evt.UserAgent}</div></div>`;
-            if (evt.Cookies) html += `<div class="detail-row"><div class="detail-label">Cookies:</div><div class="detail-value">${evt.Cookies}</div></div>`;
-            if (evt.Body) html += `<div class="detail-row"><div class="detail-label">Body:</div><div class="detail-value"><pre style="background: #0f0c29; padding: 10px; border-radius: 6px; overflow-x: auto;">${evt.Body}</pre></div></div>`;
+            if (evt.HTTPMethod) html += `<div class="detail-row"><div class="detail-label">Method:</div><div class="detail-value">${escapeHtml(evt.HTTPMethod)}</div></div>`;
+            if (evt.RequestURI) html += `<div class="detail-row"><div class="detail-label">Request URI:</div><div class="detail-value">${escapeHtml(evt.RequestURI)}</div></div>`;
+            if (evt.HostHTTPRequest) html += `<div class="detail-row"><div class="detail-label">Host:</div><div class="detail-value">${escapeHtml(evt.HostHTTPRequest)}</div></div>`;
+            if (evt.UserAgent) html += `<div class="detail-row"><div class="detail-label">User Agent:</div><div class="detail-value">${escapeHtml(evt.UserAgent)}</div></div>`;
+            if (evt.Cookies) html += `<div class="detail-row"><div class="detail-label">Cookies:</div><div class="detail-value">${escapeHtml(evt.Cookies)}</div></div>`;
+            if (evt.Body) html += `<div class="detail-row"><div class="detail-label">Body:</div><div class="detail-value"><pre class="command-output">${escapeHtml(evt.Body)}</pre></div></div>`;
             html += '</div>';
         }
 
@@ -431,7 +439,7 @@ function renderEventDetails(event) {
             html += '<div class="detail-section">';
             html += '<h4>HTTP Headers</h4>';
             for (const [key, values] of Object.entries(evt.HeadersMap)) {
-                html += `<div class="detail-row"><div class="detail-label">${key}:</div><div class="detail-value">${Array.isArray(values) ? values.join(', ') : values}</div></div>`;
+                html += `<div class="detail-row"><div class="detail-label">${escapeHtml(key)}:</div><div class="detail-value">${escapeHtml(Array.isArray(values) ? values.join(', ') : values)}</div></div>`;
             }
             html += '</div>';
         }
@@ -439,16 +447,21 @@ function renderEventDetails(event) {
         if (evt.User || evt.Password) {
             html += '<div class="detail-section">';
             html += '<h4>Credentials</h4>';
-            if (evt.User) html += `<div class="detail-row"><div class="detail-label">User:</div><div class="detail-value">${evt.User}</div></div>`;
-            if (evt.Password) html += `<div class="detail-row"><div class="detail-label">Password:</div><div class="detail-value">${evt.Password}</div></div>`;
+            if (evt.User) html += `<div class="detail-row"><div class="detail-label">User:</div><div class="detail-value">${escapeHtml(evt.User)}</div></div>`;
+            if (evt.Password) html += `<div class="detail-row"><div class="detail-label">Password:</div><div class="detail-value">${escapeHtml(evt.Password)}</div></div>`;
             html += '</div>';
         }
 
         if (evt.Command) {
             html += '<div class="detail-section">';
             html += '<h4>Command</h4>';
-            html += `<div class="detail-row"><div class="detail-value"><pre style="background: #0f0c29; padding: 10px; border-radius: 6px; overflow-x: auto;">${evt.Command}</pre></div></div>`;
-            if (evt.CommandOutput) html += `<div class="detail-row"><div class="detail-label">Output:</div><div class="detail-value"><pre style="background: #0f0c29; padding: 10px; border-radius: 6px; overflow-x: auto;">${evt.CommandOutput}</pre></div></div>`;
+            html += `<div class="detail-row"><div class="detail-value"><pre class="command-output">${escapeHtml(evt.Command)}</pre></div></div>`;
+            if (evt.CommandOutput) {
+                html += '<div class="detail-row detail-row-output">';
+                html += '<div class="detail-label">Output:</div>';
+                html += `<div class="detail-value"><pre class="command-output">${escapeHtml(evt.CommandOutput)}</pre></div>`;
+                html += '</div>';
+            }
             html += '</div>';
         }
     }
