@@ -487,6 +487,24 @@ canvas {
     color: var(--text-secondary);
     font-size: 0.9rem;
     font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.exclude-checkbox {
+    margin-left: auto;
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    accent-color: var(--danger-color);
+}
+
+/* Visual indicator for exclude filters */
+.filter-group.exclude-active .filter-input,
+.filter-group.exclude-active select.filter-input {
+    border-color: var(--danger-color);
+    box-shadow: 0 0 0 2px rgba(245, 87, 108, 0.2);
 }
 
 .filter-input {
@@ -497,12 +515,80 @@ canvas {
     color: var(--text-primary);
     font-size: 0.95rem;
     transition: all 0.3s ease;
+    width: 100%;
 }
 
 .filter-input:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+/* Search input wrapper with clear button */
+.search-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-input-wrapper .filter-input {
+    padding-right: 40px;
+}
+
+.search-clear-btn {
+    position: absolute;
+    right: 8px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    font-size: 0.85rem;
+}
+
+.search-clear-btn:hover {
+    color: var(--text-primary);
+    background: var(--hover-bg);
+}
+
+.search-clear-btn:active {
+    transform: scale(0.9);
+}
+
+/* Active filter count badge */
+.active-filter-count {
+    margin-left: 8px;
+    background: var(--danger-color);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    min-width: 20px;
+    text-align: center;
+}
+
+/* Loading state for buttons */
+.btn-loading {
+    display: none !important;
+}
+
+.btn.loading .btn-text {
+    display: none;
+}
+
+.btn.loading .btn-loading {
+    display: inline-block !important;
+}
+
+.btn.loading {
+    pointer-events: none;
+    opacity: 0.7;
 }
 
 .filter-actions {

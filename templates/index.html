@@ -157,6 +157,21 @@
                     </div>
                 </div>
 
+                <!-- Search Section for IPs -->
+                <div class="filters-section" style="margin-top: 20px;">
+                    <div class="filters-grid">
+                        <div class="filter-group" style="grid-column: 1 / -1;">
+                            <label for="ipSearchInput"><i class="fas fa-search"></i> Search IP Addresses</label>
+                            <div class="search-input-wrapper">
+                                <input type="text" id="ipSearchInput" class="filter-input" placeholder="Search by IP, protocol, or service..." autocomplete="off">
+                                <button type="button" class="search-clear-btn" id="clearIPSearchBtn" style="display: none;" title="Clear search">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="table-container">
                     <table class="data-table">
                         <thead>
@@ -211,6 +226,21 @@
                             <button class="btn btn-export" onclick="exportCredentials('json')" title="Download as JSON">
                                 <i class="fas fa-file-code"></i> JSON
                             </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search Section for Credentials -->
+                <div class="filters-section" style="margin-top: 20px;">
+                    <div class="filters-grid">
+                        <div class="filter-group" style="grid-column: 1 / -1;">
+                            <label for="credSearchInput"><i class="fas fa-search"></i> Search Credentials</label>
+                            <div class="search-input-wrapper">
+                                <input type="text" id="credSearchInput" class="filter-input" placeholder="Search by username, password, or source IP..." autocomplete="off">
+                                <button type="button" class="search-clear-btn" id="clearCredSearchBtn" style="display: none;" title="Clear search">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

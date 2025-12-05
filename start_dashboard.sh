@@ -6,11 +6,18 @@ echo "  Beelzebub Honeypot Dashboard"
 echo "======================================"
 echo ""
 
-# Check if beelzebub.log exists
-if [ ! -f "beelzebub.log" ]; then
-    echo "❌ Error: beelzebub.log not found in current directory"
-    echo "Please ensure the log file is present before starting the dashboard."
+# Check if logs directory exists and has log files
+if [ ! -d "logs" ]; then
+    echo "❌ Error: logs/ directory not found"
+    echo "Please ensure the logs directory exists before starting the dashboard."
     exit 1
+fi
+
+# Check if there are any .log files in logs directory
+if [ -z "$(find logs -name '*.log' -type f 2>/dev/null)" ]; then
+    echo "⚠️  Warning: No .log files found in logs/ directory"
+    echo "The dashboard will start but may not display any data."
+    echo ""
 fi
 
 # Check if Python 3 is installed

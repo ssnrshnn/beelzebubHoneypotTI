@@ -14,8 +14,26 @@ document.addEventListener('DOMContentLoaded', function() {
         loadStatistics();
     }
     if (document.getElementById('logsTableBody')) {
-        loadFilterOptions();
-        loadLogs();
+        loadFilterOptions().then(() => {
+            // Load filters from URL parameters first (takes precedence over localStorage)
+            const urlLoaded = loadFiltersFromURL();
+            
+            // If URL didn't have filters, try loading from localStorage
+            if (!urlLoaded) {
+                const loaded = loadFiltersFromStorage();
+                if (loaded) {
+                    // Auto-apply loaded filters
+                    currentPage = 1;
+                    loadLogs();
+                } else {
+                    loadLogs();
+                }
+            } else {
+                // URL had filters, apply them
+                currentPage = 1;
+                loadLogs();
+            }
+        });
     }
     if (document.getElementById('allIPsTableBody')) {
         loadAllIPs();
@@ -53,6 +71,7 @@ function setupTabNavigation() {
             
             // Load data if needed
             if (targetTab === 'ips') {
+                ipPage = 1; // Reset to first page when switching to IPs tab
                 loadAllIPs();
             } else if (targetTab === 'credentials') {
                 credPage = 1; // Reset to first page when switching to credentials tab
@@ -87,23 +106,215 @@ function setupEventListeners() {
     if (applyFiltersBtn) {
         applyFiltersBtn.addEventListener('click', () => {
             currentPage = 1;
-            loadLogs();
+            // Save filters to localStorage
+            saveFiltersToStorage();
+            // Update URL with filters
+            updateURLWithFilters();
+            // Show loading state
+            applyFiltersBtn.classList.add('loading');
+            loadLogs().finally(() => {
+                applyFiltersBtn.classList.remove('loading');
+            });
         });
     }
+    
+    // Enter key support for all filter inputs
+    const filterInputs = ['filterProtocol', 'filterLevel', 'filterIP', 'filterDescription', 'filterPort',
+                          'filterStartDate', 'filterEndDate', 'filterSSHCommandType'];
+    filterInputs.forEach(inputId => {
+        const input = document.getElementById(inputId);
+        if (input) {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const applyFiltersBtn = document.getElementById('applyFilters');
+                    if (applyFiltersBtn) {
+                        applyFiltersBtn.click();
+                    }
+                }
+            });
+        }
+    });
 
     const clearFiltersBtn = document.getElementById('clearFilters');
     if (clearFiltersBtn) {
         clearFiltersBtn.addEventListener('click', () => {
-            document.getElementById('filterProtocol').value = '';
-            document.getElementById('filterLevel').value = '';
-            document.getElementById('filterIP').value = '';
-            document.getElementById('filterDescription').value = '';
-            document.getElementById('filterStartDate').value = '';
-            document.getElementById('filterEndDate').value = '';
-            document.getElementById('filterSearch').value = '';
+            const filterProtocol = document.getElementById('filterProtocol');
+            const filterLevel = document.getElementById('filterLevel');
+            const filterIP = document.getElementById('filterIP');
+            const filterDescription = document.getElementById('filterDescription');
+            const filterStartDate = document.getElementById('filterStartDate');
+            const filterEndDate = document.getElementById('filterEndDate');
+            const filterSearch = document.getElementById('filterSearch');
+            
+            if (filterProtocol) filterProtocol.value = '';
+            if (filterLevel) filterLevel.value = '';
+            if (filterIP) filterIP.value = '';
+            if (filterDescription) filterDescription.value = '';
+            if (filterStartDate) filterStartDate.value = '';
+            if (filterEndDate) filterEndDate.value = '';
+            if (filterSearch) filterSearch.value = '';
+            
+            // Clear SSH command type filter
+            const filterSSHCommandType = document.getElementById('filterSSHCommandType');
+            if (filterSSHCommandType) filterSSHCommandType.value = '';
+            
+            // Clear exclude checkboxes
+            const excludeProtocol = document.getElementById('excludeProtocol');
+            const excludeLevel = document.getElementById('excludeLevel');
+            const excludeIP = document.getElementById('excludeIP');
+            const excludeDescription = document.getElementById('excludeDescription');
+            const excludeStartDate = document.getElementById('excludeStartDate');
+            const excludeEndDate = document.getElementById('excludeEndDate');
+            const excludeSSHCommandType = document.getElementById('excludeSSHCommandType');
+            
+            if (excludeProtocol) excludeProtocol.checked = false;
+            if (excludeLevel) excludeLevel.checked = false;
+            if (excludeIP) excludeIP.checked = false;
+            if (excludeDescription) excludeDescription.checked = false;
+            if (excludeStartDate) excludeStartDate.checked = false;
+            if (excludeEndDate) excludeEndDate.checked = false;
+            if (excludeSSHCommandType) excludeSSHCommandType.checked = false;
+            
+            // Clear search inputs
+            const clearSearchBtn = document.getElementById('clearSearchBtn');
+            if (filterSearch && clearSearchBtn) {
+                filterSearch.value = '';
+                clearSearchBtn.style.display = 'none';
+            }
+            
+            // Hide SSH filter if not SSH protocol
+            toggleSSHCommandTypeFilter();
+            
+            // Clear localStorage
+            localStorage.removeItem('beelzebub_filters');
+            
+            // Update active filter count
+            updateActiveFilterCount();
+            
             currentPage = 1;
             loadLogs();
         });
+    }
+    
+    // Update active filter count badge
+    updateActiveFilterCount();
+
+    // Search input handlers for IPs
+    const ipSearchInput = document.getElementById('ipSearchInput');
+    const clearIPSearchBtn = document.getElementById('clearIPSearchBtn');
+    if (ipSearchInput) {
+        let ipSearchTimeout;
+        const updateIPSearchClearBtn = () => {
+            if (clearIPSearchBtn) {
+                clearIPSearchBtn.style.display = ipSearchInput.value.trim() ? 'flex' : 'none';
+            }
+        };
+        
+        ipSearchInput.addEventListener('input', () => {
+            updateIPSearchClearBtn();
+            clearTimeout(ipSearchTimeout);
+            ipSearchTimeout = setTimeout(() => {
+                ipPage = 1;
+                loadAllIPs();
+            }, 300); // Debounce search
+        });
+        
+        if (clearIPSearchBtn) {
+            clearIPSearchBtn.addEventListener('click', () => {
+                ipSearchInput.value = '';
+                updateIPSearchClearBtn();
+                ipPage = 1;
+                loadAllIPs();
+            });
+        }
+        
+        // Enter key support
+        ipSearchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                clearTimeout(ipSearchTimeout);
+                ipPage = 1;
+                loadAllIPs();
+            }
+        });
+        
+        updateIPSearchClearBtn();
+    }
+
+    // Search input handlers for Credentials
+    const credSearchInput = document.getElementById('credSearchInput');
+    const clearCredSearchBtn = document.getElementById('clearCredSearchBtn');
+    if (credSearchInput) {
+        let credSearchTimeout;
+        const updateCredSearchClearBtn = () => {
+            if (clearCredSearchBtn) {
+                clearCredSearchBtn.style.display = credSearchInput.value.trim() ? 'flex' : 'none';
+            }
+        };
+        
+        credSearchInput.addEventListener('input', () => {
+            updateCredSearchClearBtn();
+            clearTimeout(credSearchTimeout);
+            credSearchTimeout = setTimeout(() => {
+                credPage = 1;
+                loadCredentials();
+            }, 300); // Debounce search
+        });
+        
+        if (clearCredSearchBtn) {
+            clearCredSearchBtn.addEventListener('click', () => {
+                credSearchInput.value = '';
+                updateCredSearchClearBtn();
+                credPage = 1;
+                loadCredentials();
+            });
+        }
+        
+        // Enter key support
+        credSearchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                clearTimeout(credSearchTimeout);
+                credPage = 1;
+                loadCredentials();
+            }
+        });
+        
+        updateCredSearchClearBtn();
+    }
+    
+    // Search input handler for Events page
+    const filterSearch = document.getElementById('filterSearch');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+    if (filterSearch) {
+        const updateSearchClearBtn = () => {
+            if (clearSearchBtn) {
+                clearSearchBtn.style.display = filterSearch.value.trim() ? 'flex' : 'none';
+            }
+        };
+        
+        filterSearch.addEventListener('input', updateSearchClearBtn);
+        
+        if (clearSearchBtn) {
+            clearSearchBtn.addEventListener('click', () => {
+                filterSearch.value = '';
+                updateSearchClearBtn();
+            });
+        }
+        
+        // Enter key support for search
+        filterSearch.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const applyFiltersBtn = document.getElementById('applyFilters');
+                if (applyFiltersBtn) {
+                    applyFiltersBtn.click();
+                }
+            }
+        });
+        
+        updateSearchClearBtn();
     }
 
     const prevPageBtn = document.getElementById('prevPage');
@@ -228,15 +439,89 @@ async function loadFilterOptions() {
         populateSelect('filterLevel', options.levels);
         populateSelect('filterIP', options.source_ips);
         populateSelect('filterDescription', options.descriptions);
+        populateSelect('filterPort', options.ports || []);
+        
+        // Setup protocol change listener to show/hide SSH command type filter
+        const protocolSelect = document.getElementById('filterProtocol');
+        if (protocolSelect) {
+            protocolSelect.addEventListener('change', () => {
+                toggleSSHCommandTypeFilter();
+                updateActiveFilterCount();
+            });
+            // Check initial state
+            toggleSSHCommandTypeFilter();
+        }
+        
+        // Add change listeners to all filters to update count
+        const allFilterInputs = ['filterProtocol', 'filterLevel', 'filterIP', 'filterDescription', 
+                                 'filterStartDate', 'filterEndDate', 'filterSearch', 'filterSSHCommandType'];
+        allFilterInputs.forEach(inputId => {
+            const input = document.getElementById(inputId);
+            if (input) {
+                input.addEventListener('change', () => {
+                    // Update exclude visual indicators
+                    const excludeId = 'exclude' + inputId.replace('filter', '');
+                    updateExcludeVisualIndicator(excludeId);
+                    updateActiveFilterCount();
+                });
+                input.addEventListener('input', updateActiveFilterCount);
+            }
+        });
+        
+        // Add change listeners to exclude checkboxes
+        const excludeCheckboxes = ['excludeProtocol', 'excludeLevel', 'excludeIP', 'excludeDescription',
+                                   'excludeStartDate', 'excludeEndDate', 'excludeSSHCommandType'];
+        excludeCheckboxes.forEach(checkboxId => {
+            const checkbox = document.getElementById(checkboxId);
+            if (checkbox) {
+                checkbox.addEventListener('change', () => {
+                    updateExcludeVisualIndicator(checkboxId);
+                    updateActiveFilterCount();
+                });
+                // Update initial state
+                updateExcludeVisualIndicator(checkboxId);
+            }
+        });
+        
+        // Load saved filters from localStorage
+        const loaded = loadFiltersFromStorage();
+        if (loaded) {
+            // Apply filters if they were loaded
+            updateActiveFilterCount();
+        }
+        
+        return Promise.resolve();
 
     } catch (error) {
         console.error('Error loading filter options:', error);
+        return Promise.reject(error);
+    }
+}
+
+// Toggle SSH command type filter visibility based on protocol selection
+function toggleSSHCommandTypeFilter() {
+    const protocolSelect = document.getElementById('filterProtocol');
+    const sshCommandTypeGroup = document.getElementById('sshCommandTypeGroup');
+    
+    if (protocolSelect && sshCommandTypeGroup) {
+        const isSSH = protocolSelect.value === 'SSH';
+        sshCommandTypeGroup.style.display = isSSH ? 'flex' : 'none';
+        
+        // Clear SSH command type filter if protocol is not SSH
+        if (!isSSH) {
+            const sshCommandTypeSelect = document.getElementById('filterSSHCommandType');
+            const excludeSSHCommandType = document.getElementById('excludeSSHCommandType');
+            if (sshCommandTypeSelect) sshCommandTypeSelect.value = '';
+            if (excludeSSHCommandType) excludeSSHCommandType.checked = false;
+        }
     }
 }
 
 // Populate select dropdown
 function populateSelect(elementId, options) {
     const select = document.getElementById(elementId);
+    if (!select) return;
+    
     const currentValue = select.value;
 
     // Keep the first "All" option
@@ -254,23 +539,384 @@ function populateSelect(elementId, options) {
     select.value = currentValue;
 }
 
+// Count active filters
+function countActiveFilters() {
+    let count = 0;
+    
+    const filterProtocol = document.getElementById('filterProtocol');
+    const filterLevel = document.getElementById('filterLevel');
+    const filterIP = document.getElementById('filterIP');
+    const filterDescription = document.getElementById('filterDescription');
+    const filterStartDate = document.getElementById('filterStartDate');
+    const filterEndDate = document.getElementById('filterEndDate');
+    const filterSearch = document.getElementById('filterSearch');
+    const filterSSHCommandType = document.getElementById('filterSSHCommandType');
+    
+    if (filterProtocol && filterProtocol.value) count++;
+    if (filterLevel && filterLevel.value) count++;
+    if (filterIP && filterIP.value) count++;
+    if (filterDescription && filterDescription.value) count++;
+    if (filterStartDate && filterStartDate.value) count++;
+    if (filterEndDate && filterEndDate.value) count++;
+    if (filterSearch && filterSearch.value.trim()) count++;
+    if (filterSSHCommandType && filterSSHCommandType.value) count++;
+    
+    // Count exclude checkboxes
+    const excludeProtocol = document.getElementById('excludeProtocol');
+    const excludeLevel = document.getElementById('excludeLevel');
+    const excludeIP = document.getElementById('excludeIP');
+    const excludeDescription = document.getElementById('excludeDescription');
+    const excludeStartDate = document.getElementById('excludeStartDate');
+    const excludeEndDate = document.getElementById('excludeEndDate');
+    const excludeSSHCommandType = document.getElementById('excludeSSHCommandType');
+    
+    if (excludeProtocol && excludeProtocol.checked && filterProtocol && filterProtocol.value) count++;
+    if (excludeLevel && excludeLevel.checked && filterLevel && filterLevel.value) count++;
+    if (excludeIP && excludeIP.checked && filterIP && filterIP.value) count++;
+    if (excludeDescription && excludeDescription.checked && filterDescription && filterDescription.value) count++;
+    if (excludeStartDate && excludeStartDate.checked && filterStartDate && filterStartDate.value) count++;
+    if (excludeEndDate && excludeEndDate.checked && filterEndDate && filterEndDate.value) count++;
+    if (excludeSSHCommandType && excludeSSHCommandType.checked && filterSSHCommandType && filterSSHCommandType.value) count++;
+    
+    return count;
+}
+
+// Update active filter count badge
+function updateActiveFilterCount() {
+    const count = countActiveFilters();
+    const badge = document.getElementById('activeFilterCount');
+    if (badge) {
+        if (count > 0) {
+            badge.textContent = count;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+// Update visual indicator for exclude checkboxes
+function updateExcludeVisualIndicator(checkboxId) {
+    const checkbox = document.getElementById(checkboxId);
+    if (!checkbox) return;
+    
+    const filterGroup = checkbox.closest('.filter-group');
+    if (filterGroup) {
+        if (checkbox.checked && checkboxId.startsWith('exclude')) {
+            // Check if corresponding filter has a value
+            const filterId = checkboxId.replace('exclude', 'filter');
+            const filterInput = document.getElementById(filterId);
+            if (filterInput && filterInput.value) {
+                filterGroup.classList.add('exclude-active');
+            } else {
+                filterGroup.classList.remove('exclude-active');
+            }
+        } else {
+            filterGroup.classList.remove('exclude-active');
+        }
+    }
+}
+
+// Load filters from URL parameters
+function loadFiltersFromURL() {
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Only load from URL if we're on the events page
+        if (!document.getElementById('logsTableBody')) {
+            return false;
+        }
+        
+        const filterProtocol = document.getElementById('filterProtocol');
+        const filterLevel = document.getElementById('filterLevel');
+        const filterIP = document.getElementById('filterIP');
+        const filterDescription = document.getElementById('filterDescription');
+        const filterPort = document.getElementById('filterPort');
+        const filterStartDate = document.getElementById('filterStartDate');
+        const filterEndDate = document.getElementById('filterEndDate');
+        const filterSearch = document.getElementById('filterSearch');
+        const filterSSHCommandType = document.getElementById('filterSSHCommandType');
+        
+        // Load filter values from URL
+        if (filterProtocol && urlParams.has('protocol')) filterProtocol.value = urlParams.get('protocol');
+        if (filterLevel && urlParams.has('level')) filterLevel.value = urlParams.get('level');
+        if (filterIP && urlParams.has('source_ip')) filterIP.value = urlParams.get('source_ip');
+        if (filterDescription && urlParams.has('description')) filterDescription.value = urlParams.get('description');
+        if (filterPort && urlParams.has('port')) filterPort.value = urlParams.get('port');
+        if (filterStartDate && urlParams.has('start_date')) filterStartDate.value = urlParams.get('start_date');
+        if (filterEndDate && urlParams.has('end_date')) filterEndDate.value = urlParams.get('end_date');
+        if (filterSearch && urlParams.has('search')) filterSearch.value = urlParams.get('search');
+        if (filterSSHCommandType && urlParams.has('ssh_command_type')) filterSSHCommandType.value = urlParams.get('ssh_command_type');
+        
+        // Load exclude checkboxes
+        const excludeProtocol = document.getElementById('excludeProtocol');
+        const excludeLevel = document.getElementById('excludeLevel');
+        const excludeIP = document.getElementById('excludeIP');
+        const excludeDescription = document.getElementById('excludeDescription');
+        const excludePort = document.getElementById('excludePort');
+        const excludeStartDate = document.getElementById('excludeStartDate');
+        const excludeEndDate = document.getElementById('excludeEndDate');
+        const excludeSSHCommandType = document.getElementById('excludeSSHCommandType');
+        
+        if (excludeProtocol && urlParams.has('exclude_protocol')) excludeProtocol.checked = urlParams.get('exclude_protocol') === 'true';
+        if (excludeLevel && urlParams.has('exclude_level')) excludeLevel.checked = urlParams.get('exclude_level') === 'true';
+        if (excludeIP && urlParams.has('exclude_source_ip')) excludeIP.checked = urlParams.get('exclude_source_ip') === 'true';
+        if (excludeDescription && urlParams.has('exclude_description')) excludeDescription.checked = urlParams.get('exclude_description') === 'true';
+        if (excludePort && urlParams.has('exclude_port')) excludePort.checked = urlParams.get('exclude_port') === 'true';
+        if (excludeStartDate && urlParams.has('exclude_start_date')) excludeStartDate.checked = urlParams.get('exclude_start_date') === 'true';
+        if (excludeEndDate && urlParams.has('exclude_end_date')) excludeEndDate.checked = urlParams.get('exclude_end_date') === 'true';
+        if (excludeSSHCommandType && urlParams.has('exclude_ssh_command_type')) excludeSSHCommandType.checked = urlParams.get('exclude_ssh_command_type') === 'true';
+        
+        // Load pagination
+        if (urlParams.has('page')) {
+            const page = parseInt(urlParams.get('page'));
+            if (!isNaN(page) && page > 0) {
+                currentPage = page;
+            }
+        }
+        
+        // Update SSH filter visibility
+        toggleSSHCommandTypeFilter();
+        
+        // Update search clear buttons
+        const clearSearchBtn = document.getElementById('clearSearchBtn');
+        if (filterSearch && clearSearchBtn) {
+            clearSearchBtn.style.display = filterSearch.value.trim() ? 'flex' : 'none';
+        }
+        
+        // Update exclude visual indicators
+        const excludeCheckboxes = ['excludeProtocol', 'excludeLevel', 'excludeIP', 'excludeDescription',
+                                   'excludeStartDate', 'excludeEndDate', 'excludeSSHCommandType'];
+        excludeCheckboxes.forEach(checkboxId => {
+            updateExcludeVisualIndicator(checkboxId);
+        });
+        
+        return urlParams.toString().length > 0;
+    } catch (e) {
+        console.warn('Failed to load filters from URL:', e);
+        return false;
+    }
+}
+
+// Update URL with current filter state (for sharing)
+function updateURLWithFilters() {
+    try {
+        const params = new URLSearchParams();
+        
+        const filterProtocol = document.getElementById('filterProtocol');
+        const filterLevel = document.getElementById('filterLevel');
+        const filterIP = document.getElementById('filterIP');
+        const filterDescription = document.getElementById('filterDescription');
+        const filterPort = document.getElementById('filterPort');
+        const filterStartDate = document.getElementById('filterStartDate');
+        const filterEndDate = document.getElementById('filterEndDate');
+        const filterSearch = document.getElementById('filterSearch');
+        const filterSSHCommandType = document.getElementById('filterSSHCommandType');
+        
+        if (filterProtocol && filterProtocol.value) params.append('protocol', filterProtocol.value);
+        if (filterLevel && filterLevel.value) params.append('level', filterLevel.value);
+        if (filterIP && filterIP.value) params.append('source_ip', filterIP.value);
+        if (filterDescription && filterDescription.value) params.append('description', filterDescription.value);
+        if (filterPort && filterPort.value) params.append('port', filterPort.value);
+        if (filterStartDate && filterStartDate.value) params.append('start_date', filterStartDate.value);
+        if (filterEndDate && filterEndDate.value) params.append('end_date', filterEndDate.value);
+        if (filterSearch && filterSearch.value.trim()) params.append('search', filterSearch.value.trim());
+        if (filterSSHCommandType && filterSSHCommandType.value) params.append('ssh_command_type', filterSSHCommandType.value);
+        
+        const excludeProtocol = document.getElementById('excludeProtocol');
+        const excludeLevel = document.getElementById('excludeLevel');
+        const excludeIP = document.getElementById('excludeIP');
+        const excludeDescription = document.getElementById('excludeDescription');
+        const excludePort = document.getElementById('excludePort');
+        const excludeStartDate = document.getElementById('excludeStartDate');
+        const excludeEndDate = document.getElementById('excludeEndDate');
+        const excludeSSHCommandType = document.getElementById('excludeSSHCommandType');
+        
+        if (excludeProtocol && excludeProtocol.checked) params.append('exclude_protocol', 'true');
+        if (excludeLevel && excludeLevel.checked) params.append('exclude_level', 'true');
+        if (excludeIP && excludeIP.checked) params.append('exclude_source_ip', 'true');
+        if (excludeDescription && excludeDescription.checked) params.append('exclude_description', 'true');
+        if (excludePort && excludePort.checked) params.append('exclude_port', 'true');
+        if (excludeStartDate && excludeStartDate.checked) params.append('exclude_start_date', 'true');
+        if (excludeEndDate && excludeEndDate.checked) params.append('exclude_end_date', 'true');
+        if (excludeSSHCommandType && excludeSSHCommandType.checked) params.append('exclude_ssh_command_type', 'true');
+        
+        if (currentPage > 1) params.append('page', currentPage);
+        
+        // Update URL without reloading page
+        const newURL = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+        window.history.pushState({}, '', newURL);
+    } catch (e) {
+        console.warn('Failed to update URL with filters:', e);
+    }
+}
+
+// Save filters to localStorage
+function saveFiltersToStorage() {
+    try {
+        const filters = {
+            protocol: document.getElementById('filterProtocol')?.value || '',
+            level: document.getElementById('filterLevel')?.value || '',
+            source_ip: document.getElementById('filterIP')?.value || '',
+            description: document.getElementById('filterDescription')?.value || '',
+            port: document.getElementById('filterPort')?.value || '',
+            start_date: document.getElementById('filterStartDate')?.value || '',
+            end_date: document.getElementById('filterEndDate')?.value || '',
+            search: document.getElementById('filterSearch')?.value || '',
+            ssh_command_type: document.getElementById('filterSSHCommandType')?.value || '',
+            exclude_protocol: document.getElementById('excludeProtocol')?.checked || false,
+            exclude_level: document.getElementById('excludeLevel')?.checked || false,
+            exclude_ip: document.getElementById('excludeIP')?.checked || false,
+            exclude_description: document.getElementById('excludeDescription')?.checked || false,
+            exclude_port: document.getElementById('excludePort')?.checked || false,
+            exclude_start_date: document.getElementById('excludeStartDate')?.checked || false,
+            exclude_end_date: document.getElementById('excludeEndDate')?.checked || false,
+            exclude_ssh_command_type: document.getElementById('excludeSSHCommandType')?.checked || false
+        };
+        localStorage.setItem('beelzebub_filters', JSON.stringify(filters));
+    } catch (e) {
+        console.warn('Failed to save filters to localStorage:', e);
+    }
+}
+
+// Load filters from localStorage
+function loadFiltersFromStorage() {
+    try {
+        const saved = localStorage.getItem('beelzebub_filters');
+        if (!saved) return;
+        
+        const filters = JSON.parse(saved);
+        
+        const filterProtocol = document.getElementById('filterProtocol');
+        const filterLevel = document.getElementById('filterLevel');
+        const filterIP = document.getElementById('filterIP');
+        const filterDescription = document.getElementById('filterDescription');
+        const filterStartDate = document.getElementById('filterStartDate');
+        const filterEndDate = document.getElementById('filterEndDate');
+        const filterSearch = document.getElementById('filterSearch');
+        const filterSSHCommandType = document.getElementById('filterSSHCommandType');
+        
+        if (filterProtocol && filters.protocol) filterProtocol.value = filters.protocol;
+        if (filterLevel && filters.level) filterLevel.value = filters.level;
+        if (filterIP && filters.source_ip) filterIP.value = filters.source_ip;
+        if (filterDescription && filters.description) filterDescription.value = filters.description;
+        if (filterPort && filters.port) filterPort.value = filters.port;
+        if (filterStartDate && filters.start_date) filterStartDate.value = filters.start_date;
+        if (filterEndDate && filters.end_date) filterEndDate.value = filters.end_date;
+        if (filterSearch && filters.search) filterSearch.value = filters.search;
+        if (filterSSHCommandType && filters.ssh_command_type) filterSSHCommandType.value = filters.ssh_command_type;
+        
+        const excludeProtocol = document.getElementById('excludeProtocol');
+        const excludeLevel = document.getElementById('excludeLevel');
+        const excludeIP = document.getElementById('excludeIP');
+        const excludeDescription = document.getElementById('excludeDescription');
+        const excludePort = document.getElementById('excludePort');
+        const excludeStartDate = document.getElementById('excludeStartDate');
+        const excludeEndDate = document.getElementById('excludeEndDate');
+        const excludeSSHCommandType = document.getElementById('excludeSSHCommandType');
+        
+        if (excludeProtocol) excludeProtocol.checked = filters.exclude_protocol || false;
+        if (excludeLevel) excludeLevel.checked = filters.exclude_level || false;
+        if (excludeIP) excludeIP.checked = filters.exclude_ip || false;
+        if (excludeDescription) excludeDescription.checked = filters.exclude_description || false;
+        if (excludePort) excludePort.checked = filters.exclude_port || false;
+        if (excludeStartDate) excludeStartDate.checked = filters.exclude_start_date || false;
+        if (excludeEndDate) excludeEndDate.checked = filters.exclude_end_date || false;
+        if (excludeSSHCommandType) excludeSSHCommandType.checked = filters.exclude_ssh_command_type || false;
+        
+        // Update SSH filter visibility
+        toggleSSHCommandTypeFilter();
+        
+        // Update search clear buttons
+        const clearSearchBtn = document.getElementById('clearSearchBtn');
+        if (filterSearch && clearSearchBtn) {
+            clearSearchBtn.style.display = filterSearch.value.trim() ? 'flex' : 'none';
+        }
+        
+        // Update exclude visual indicators
+        const excludeCheckboxes = ['excludeProtocol', 'excludeLevel', 'excludeIP', 'excludeDescription', 'excludePort',
+                                   'excludeStartDate', 'excludeEndDate', 'excludeSSHCommandType'];
+        excludeCheckboxes.forEach(checkboxId => {
+            updateExcludeVisualIndicator(checkboxId);
+        });
+        
+        return true;
+    } catch (e) {
+        console.warn('Failed to load filters from localStorage:', e);
+        return false;
+    }
+}
+
 // Load logs
 async function loadLogs() {
     const tbody = document.getElementById('logsTableBody');
+    if (!tbody) return;
+    
     tbody.innerHTML = '<tr><td colspan="7" class="loading"><i class="fas fa-spinner fa-spin"></i> Loading logs...</td></tr>';
 
     try {
+        const filterProtocol = document.getElementById('filterProtocol');
+        const filterLevel = document.getElementById('filterLevel');
+        const filterIP = document.getElementById('filterIP');
+        const filterDescription = document.getElementById('filterDescription');
+        const filterPort = document.getElementById('filterPort');
+        const filterStartDate = document.getElementById('filterStartDate');
+        const filterEndDate = document.getElementById('filterEndDate');
+        const filterSearch = document.getElementById('filterSearch');
+        
+        const filterSSHCommandType = document.getElementById('filterSSHCommandType');
+        
         const params = new URLSearchParams({
             page: currentPage,
             per_page: perPage,
-            protocol: document.getElementById('filterProtocol').value,
-            level: document.getElementById('filterLevel').value,
-            source_ip: document.getElementById('filterIP').value,
-            description: document.getElementById('filterDescription').value,
-            start_date: document.getElementById('filterStartDate').value,
-            end_date: document.getElementById('filterEndDate').value,
-            search: document.getElementById('filterSearch').value
+            protocol: filterProtocol ? filterProtocol.value : '',
+            level: filterLevel ? filterLevel.value : '',
+            source_ip: filterIP ? filterIP.value : '',
+            description: filterDescription ? filterDescription.value : '',
+            port: filterPort ? filterPort.value : '',
+            start_date: filterStartDate ? filterStartDate.value : '',
+            end_date: filterEndDate ? filterEndDate.value : '',
+            search: filterSearch ? filterSearch.value : '',
+            ssh_command_type: filterSSHCommandType ? filterSSHCommandType.value : ''
         });
+
+        // Add exclude parameters if checkboxes are checked
+        const excludeProtocol = document.getElementById('excludeProtocol');
+        const excludeLevel = document.getElementById('excludeLevel');
+        const excludeIP = document.getElementById('excludeIP');
+        const excludeDescription = document.getElementById('excludeDescription');
+        const excludePort = document.getElementById('excludePort');
+        const excludeStartDate = document.getElementById('excludeStartDate');
+        const excludeEndDate = document.getElementById('excludeEndDate');
+        const excludeSSHCommandType = document.getElementById('excludeSSHCommandType');
+
+        if (excludeProtocol && excludeProtocol.checked && filterProtocol && filterProtocol.value) {
+            params.append('exclude_protocol', filterProtocol.value);
+        }
+        if (excludeLevel && excludeLevel.checked && filterLevel && filterLevel.value) {
+            params.append('exclude_level', filterLevel.value);
+        }
+        if (excludeIP && excludeIP.checked && filterIP && filterIP.value) {
+            params.append('exclude_source_ip', filterIP.value);
+        }
+        if (excludeDescription && excludeDescription.checked && filterDescription && filterDescription.value) {
+            params.append('exclude_description', filterDescription.value);
+        }
+        if (excludePort && excludePort.checked && filterPort && filterPort.value) {
+            params.append('exclude_port', filterPort.value);
+        }
+        if (excludeStartDate && excludeStartDate.checked && filterStartDate && filterStartDate.value) {
+            params.append('exclude_start_date', filterStartDate.value);
+        }
+        if (excludeEndDate && excludeEndDate.checked && filterEndDate && filterEndDate.value) {
+            params.append('exclude_end_date', filterEndDate.value);
+        }
+        if (excludeSSHCommandType && excludeSSHCommandType.checked && filterSSHCommandType && filterSSHCommandType.value) {
+            params.append('exclude_ssh_command_type', filterSSHCommandType.value);
+        }
+        
+        // Update active filter count when filters change
+        updateActiveFilterCount();
 
         const response = await fetch(`/api/logs?${params}`);
         const data = await response.json();
@@ -279,9 +925,27 @@ async function loadLogs() {
         tbody.innerHTML = '';
 
         if (data.logs.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="loading">No logs found</td></tr>';
+            const hasFilters = countActiveFilters() > 0;
+            let emptyMessage = '<tr><td colspan="7" class="loading">';
+            if (hasFilters) {
+                emptyMessage += '<div style="padding: 20px;"><i class="fas fa-filter" style="font-size: 2rem; color: var(--text-secondary); margin-bottom: 10px;"></i><br>';
+                emptyMessage += '<strong style="color: var(--text-primary);">No logs match your filters</strong><br>';
+                emptyMessage += '<span style="color: var(--text-secondary); font-size: 0.9rem;">Try adjusting your filter criteria or clearing filters to see more results.</span></div>';
+            } else {
+                emptyMessage += '<div style="padding: 20px;"><i class="fas fa-inbox" style="font-size: 2rem; color: var(--text-secondary); margin-bottom: 10px;"></i><br>';
+                emptyMessage += '<strong style="color: var(--text-primary);">No logs found</strong><br>';
+                emptyMessage += '<span style="color: var(--text-secondary); font-size: 0.9rem;">The log file may be empty or not loaded yet.</span></div>';
+            }
+            emptyMessage += '</td></tr>';
+            tbody.innerHTML = emptyMessage;
+            
+            // Update active filter count
+            updateActiveFilterCount();
             return;
         }
+        
+        // Update active filter count
+        updateActiveFilterCount();
 
         // Render logs
         data.logs.forEach(log => {
@@ -298,7 +962,12 @@ async function loadLogs() {
 
     } catch (error) {
         console.error('Error loading logs:', error);
-        tbody.innerHTML = '<tr><td colspan="7" class="loading">Error loading logs</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="loading">' +
+            '<div style="padding: 20px;"><i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: var(--danger-color); margin-bottom: 10px;"></i><br>' +
+            '<strong style="color: var(--text-primary);">Error loading logs</strong><br>' +
+            '<span style="color: var(--text-secondary); font-size: 0.9rem;">Please refresh the page or check your connection.</span></div>' +
+            '</td></tr>';
+        updateActiveFilterCount();
     }
 }
 
@@ -961,13 +1630,33 @@ async function loadAllIPs() {
             page: ipPage,
             per_page: ipPerPage
         });
+        
+        // Add search parameter if search input exists and has value
+        const ipSearchInput = document.getElementById('ipSearchInput');
+        if (ipSearchInput && ipSearchInput.value.trim()) {
+            params.append('search', ipSearchInput.value.trim());
+        }
+        
         const response = await fetch(`/api/all-ips?${params}`);
         const data = await response.json();
         
         tbody.innerHTML = '';
         
         if (!data.ips || data.ips.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="loading">No IP addresses found</td></tr>';
+            const ipSearchInput = document.getElementById('ipSearchInput');
+            const hasSearch = ipSearchInput && ipSearchInput.value.trim();
+            let emptyMessage = '<tr><td colspan="7" class="loading">';
+            if (hasSearch) {
+                emptyMessage += '<div style="padding: 20px;"><i class="fas fa-search" style="font-size: 2rem; color: var(--text-secondary); margin-bottom: 10px;"></i><br>';
+                emptyMessage += '<strong style="color: var(--text-primary);">No IP addresses match your search</strong><br>';
+                emptyMessage += '<span style="color: var(--text-secondary); font-size: 0.9rem;">Try a different search term or clear the search to see all IPs.</span></div>';
+            } else {
+                emptyMessage += '<div style="padding: 20px;"><i class="fas fa-network-wired" style="font-size: 2rem; color: var(--text-secondary); margin-bottom: 10px;"></i><br>';
+                emptyMessage += '<strong style="color: var(--text-primary);">No IP addresses found</strong><br>';
+                emptyMessage += '<span style="color: var(--text-secondary); font-size: 0.9rem;">The log file may not contain any IP addresses yet.</span></div>';
+            }
+            emptyMessage += '</td></tr>';
+            tbody.innerHTML = emptyMessage;
             return;
         }
         
@@ -1056,13 +1745,32 @@ async function loadCredentials() {
             per_page: credPerPage
         });
         
+        // Add search parameter if search input exists and has value
+        const credSearchInput = document.getElementById('credSearchInput');
+        if (credSearchInput && credSearchInput.value.trim()) {
+            params.append('search', credSearchInput.value.trim());
+        }
+        
         const response = await fetch(`/api/credentials?${params}`);
         const data = await response.json();
         
         tbody.innerHTML = '';
         
         if (data.credentials.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="loading">No credentials found</td></tr>';
+            const credSearchInput = document.getElementById('credSearchInput');
+            const hasSearch = credSearchInput && credSearchInput.value.trim();
+            let emptyMessage = '<tr><td colspan="4" class="loading">';
+            if (hasSearch) {
+                emptyMessage += '<div style="padding: 20px;"><i class="fas fa-search" style="font-size: 2rem; color: var(--text-secondary); margin-bottom: 10px;"></i><br>';
+                emptyMessage += '<strong style="color: var(--text-primary);">No credentials match your search</strong><br>';
+                emptyMessage += '<span style="color: var(--text-secondary); font-size: 0.9rem;">Try a different search term or clear the search to see all credentials.</span></div>';
+            } else {
+                emptyMessage += '<div style="padding: 20px;"><i class="fas fa-key" style="font-size: 2rem; color: var(--text-secondary); margin-bottom: 10px;"></i><br>';
+                emptyMessage += '<strong style="color: var(--text-primary);">No credentials found</strong><br>';
+                emptyMessage += '<span style="color: var(--text-secondary); font-size: 0.9rem;">The honeypot hasn\'t captured any credentials yet.</span></div>';
+            }
+            emptyMessage += '</td></tr>';
+            tbody.innerHTML = emptyMessage;
             return;
         }
         
@@ -1129,13 +1837,27 @@ async function loadCredentials() {
     }
 }
 
-// Export IP addresses
+// Export IP addresses (with search filter support)
 function exportIPs(format) {
-    window.location.href = `/api/export/ips/${format}`;
+    const ipSearchInput = document.getElementById('ipSearchInput');
+    const search = ipSearchInput && ipSearchInput.value.trim() ? ipSearchInput.value.trim() : '';
+    const params = new URLSearchParams();
+    if (search) {
+        params.append('search', search);
+    }
+    const url = `/api/export/ips/${format}${params.toString() ? '?' + params.toString() : ''}`;
+    window.location.href = url;
 }
 
-// Export credentials
+// Export credentials (with search filter support)
 function exportCredentials(format) {
-    window.location.href = `/api/export/credentials/${format}`;
+    const credSearchInput = document.getElementById('credSearchInput');
+    const search = credSearchInput && credSearchInput.value.trim() ? credSearchInput.value.trim() : '';
+    const params = new URLSearchParams();
+    if (search) {
+        params.append('search', search);
+    }
+    const url = `/api/export/credentials/${format}${params.toString() ? '?' + params.toString() : ''}`;
+    window.location.href = url;
 }
 
