@@ -49,11 +49,6 @@ htmlcov/
 Thumbs.db
 .directory
 
-# Log files (too large for git)
-*.log
-logs/*.log
-logs/*.json
+# Large log file (exceeds GitHub's 100MB limit)
 beelzebub.log
-
-# Logs
 logs/beelzebub.log
