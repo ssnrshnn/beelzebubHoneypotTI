@@ -49,3 +49,5 @@ htmlcov/
 Thumbs.db
 .directory
 
+# Logs
+logs/beelzebub.log
