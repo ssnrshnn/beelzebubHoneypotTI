@@ -49,5 +49,10 @@ htmlcov/
 Thumbs.db
 .directory
 
-# Logs
-logs/beelzebub.log
+# Logs - exclude all log files from git
+*.log
+logs/*.log
+logs/*.json
+eve.json
+fast.log
+enrichment_cache.json
