@@ -1645,7 +1645,7 @@ async function loadAllIPs() {
         if (!data.ips || data.ips.length === 0) {
             const ipSearchInput = document.getElementById('ipSearchInput');
             const hasSearch = ipSearchInput && ipSearchInput.value.trim();
-            let emptyMessage = '<tr><td colspan="7" class="loading">';
+            let emptyMessage = '<tr><td colspan="8" class="loading">';
             if (hasSearch) {
                 emptyMessage += '<div style="padding: 20px;"><i class="fas fa-search" style="font-size: 2rem; color: var(--text-secondary); margin-bottom: 10px;"></i><br>';
                 emptyMessage += '<strong style="color: var(--text-primary);">No IP addresses match your search</strong><br>';

@@ -1,8 +1,8 @@
 # Beelzebub Honeypot Dashboard
 
-A real-time web dashboard for analyzing [Beelzebub](https://github.com/mariocandela/beelzebub) honeypot logs with  filtering capabilities and a nice data visualizations.
+A comprehensive real-time web dashboard for analyzing [Beelzebub](https://github.com/mariocandela/beelzebub) honeypot logs with advanced filtering capabilities, search functionality, and rich data visualizations.
 
-This dashboard is fed with real-world honeypot traffic, reflecting live attack behavior rather than synthetic data.
+This dashboard is fed with real-world honeypot traffic, reflecting live attack behavior rather than synthetic data. It supports multiple log formats including Beelzebub logs and Suricata IDS logs.
 
 
 ## Quick Start
@@ -10,7 +10,7 @@ This dashboard is fed with real-world honeypot traffic, reflecting live attack b
 ### Prerequisites
 - Python 3.8 or higher
 - pip (Python package manager)
-- Beelzebub honeypot log file (JSON format)
+- Beelzebub honeypot log files (JSON format) or Suricata log files
 
 ### Installation
 
@@ -24,7 +24,6 @@ cd beelzebubHoneypot
 ```bash
 pip install -r requirements.txt
 ```
-
 
 ### Running the Dashboard
 
@@ -71,26 +70,27 @@ Edit `app.py` and modify the last line:
 app.run(debug=True, host='0.0.0.0', port=YOUR_PORT)
 ```
 
-### Changing the Log File
+### Log File Configuration
 
-Edit `app.py` and modify the `LOG_FILE` constant:
-```python
-LOG_FILE = 'path/to/your/logfile.log'
+The dashboard automatically loads all log files from the `logs/` directory. Supported formats:
+
+- **Beelzebub Logs**: `protocol-port.log` format (e.g., `ssh-22.log`, `http-80.log`)
+- **Suricata EVE JSON**: `eve.json` file
+- **Suricata Fast Log**: `fast.log` file
+
+The dashboard detects protocol and port from filenames automatically. Place your log files in the `logs/` directory and they will be loaded on startup.
+
+**Example log file structure:**
+```
+logs/
+├── ssh-22.log
+├── http-80.log
+├── http-8080.log
+├── ftp-21.log
+├── eve.json
+└── fast.log
 ```
 
-
-### Example API Usage
-
-```bash
-# Get statistics
-curl http://localhost:5000/api/statistics
-
-# Get filtered logs
-curl "http://localhost:5000/api/logs?protocol=HTTP&per_page=50"
-
-# Analyze an IP
-curl http://localhost:5000/api/ip-analysis/192.168.1.100
-```
 
 ### Threat Intelligence Shortcuts
 
@@ -114,45 +114,28 @@ The dashboard includes quick access buttons to multiple threat intelligence serv
 - No API keys required—all links use public web interfaces
 - Perfect for quick reputation checks during incident investigation
 
-##  Log Format
-
-The dashboard expects JSON-formatted log entries with this structure:
-
-```json
-{
-  "time": "2025-11-06T17:30:36Z",
-  "level": "info",
-  "msg": "New Event",
-  "event": {
-    "Protocol": "HTTP",
-    "SourceIp": "192.168.1.148",
-    "SourcePort": "58406",
-    "Description": "WordPress 6.0.2 - Realistic Honeypot",
-    "HTTPMethod": "GET",
-    "RequestURI": "/",
-    "UserAgent": "Mozilla/5.0...",
-    ...
-  }
-}
-```
-
-
 
 ## Project Structure
 
 ```
 beelzebub-dashboard/
-├── app.py                # Flask backend server
-├── beelzebub.log         # Your honeypot logs (not in repo)
+├── app.py                # Flask backend server with API endpoints
 ├── requirements.txt      # Python dependencies
-├── start_dashboard.sh    # Convenient start script
+├── start_dashboard.sh    # Convenient start script with port detection
 ├── README.md             # This file
-├── screenshots/          # Dashboard screenshots shown below
+├── .gitignore            # Git ignore rules
+├── logs/                 # Log files directory (not in repo)
+│   ├── ssh-22.log        # SSH logs
+│   ├── http-80.log       # HTTP logs
+│   ├── eve.json          # Suricata EVE JSON logs
+│   └── fast.log          # Suricata fast log
+├── screenshots/          # Dashboard screenshots
 ├── templates/
-│   └── index.html        # Dashboard HTML
+│   ├── index.html        # Main dashboard HTML
+│   └── events.html       # Event logs page HTML
 └── static/
     ├── css/
     │   └── style.css     # Dashboard styling
     └── js/
-        └── app.js        # Dashboard functionality
+        └── app.js        # Dashboard functionality and API integration
 ```
